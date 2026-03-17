@@ -358,7 +358,7 @@ class RenderManager {
     
     createRope() {
         // パーティクルで光の縄を表現
-        const particleCount = 30;
+        const particleCount = 40;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         
@@ -370,10 +370,10 @@ class RenderManager {
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         
-        // 光る縄マテリアル
+        // 光る縄マテリアル（発光効果）
         const material = new THREE.PointsMaterial({
             color: 0xff3366, // 赤い光
-            size: 0.12,
+            size: 0.15,
             transparent: true,
             opacity: 1.0,
             blending: THREE.AdditiveBlending,
@@ -388,7 +388,35 @@ class RenderManager {
         };
         
         this.scene.add(this.rope.points);
+        
+        // 縄の軌跡エフェクト（残像用）
+        this.createRopeTrail();
+        
         Utils.log("縄作成完了");
+    }
+    
+    createRopeTrail() {
+        // 縄の軌跡（残像表現）
+        const trailCount = 3;
+        this.ropeTrails = [];
+        
+        for (let t = 0; t < trailCount; t++) {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(40 * 3);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0xff3366,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.3 - (t * 0.08),
+                blending: THREE.AdditiveBlending
+            });
+            
+            const trail = new THREE.Points(geometry, material);
+            this.scene.add(trail);
+            this.ropeTrails.push(trail);
+        }
     }
     
     createFloorMarker() {
@@ -924,19 +952,19 @@ class RenderManager {
         const rightRobot = this.robots[1].mesh.position;
         
         // 縄の高さを sin カーブで変化
-        const ropeY = Math.sin(angle) * 0.8 + 0.6; // 0.6〜1.4 くらい
+        const ropeY = Math.sin(angle) * 1.0 + 0.8; // 0.8〜1.8 くらい
         
         // 縄の色を位置で変化（下の時は赤く危険表示）
         const isRopeLow = Math.sin(angle) < -0.5;
         if (isRopeLow) {
             // 危険ゾーン：赤く強く光る
             this.rope.points.material.color.setHex(0xff0044);
-            this.rope.points.material.size = 0.15;
+            this.rope.points.material.size = 0.18;
             this.rope.points.material.opacity = 1.0;
         } else {
             // 通常：ピンクの光
             this.rope.points.material.color.setHex(this.rope.baseColor);
-            this.rope.points.material.size = 0.12;
+            this.rope.points.material.size = 0.15;
             this.rope.points.material.opacity = 0.9;
         }
         
@@ -951,7 +979,7 @@ class RenderManager {
             const z = leftRobot.z + (rightRobot.z - leftRobot.z) * t;
             
             // 縄のたるみ（放物線）
-            const sag = Math.sin(t * Math.PI) * 0.2;
+            const sag = Math.sin(t * Math.PI) * 0.3;
             
             positions[i*3] = x;
             positions[i*3+1] = ropeY - sag;
@@ -959,6 +987,9 @@ class RenderManager {
         }
         
         this.rope.points.geometry.attributes.position.needsUpdate = true;
+        
+        // 縄の軌跡更新
+        this.updateRopeTrails(angle, leftRobot, rightRobot, ropeY);
         
         // 影リングの位置を追跡（縄が一番下の時だけ強調）
         if (this.shadowRing) {
@@ -973,6 +1004,30 @@ class RenderManager {
                 this.shadowRing.scale.set(1.0, 1.0, 1.0);
             }
         }
+    }
+    
+    updateRopeTrails(angle, leftRobot, rightRobot, ropeY) {
+        if (!this.ropeTrails) return;
+        
+        // 軌跡は少し前の角度を使用
+        this.ropeTrails.forEach((trail, idx) => {
+            const trailAngle = angle - (idx + 1) * 0.15;
+            const trailRopeY = Math.sin(trailAngle) * 1.0 + 0.8;
+            const positions = trail.geometry.attributes.position.array;
+            
+            for (let i = 0; i < 40; i++) {
+                const t = i / 39;
+                const x = leftRobot.x + (rightRobot.x - leftRobot.x) * t;
+                const z = leftRobot.z + (rightRobot.z - leftRobot.z) * t;
+                const sag = Math.sin(t * Math.PI) * 0.3;
+                
+                positions[i*3] = x;
+                positions[i*3+1] = trailRopeY - sag;
+                positions[i*3+2] = z;
+            }
+            
+            trail.geometry.attributes.position.needsUpdate = true;
+        });
     }
     
     setRobotEmotion(emotion) {
@@ -1156,6 +1211,14 @@ class RenderManager {
         
         // キーボード/ボタン操作によるアバター移動
         this.updateAvatarMovement();
+        
+        // 縄のデモ回転（ゲーム開始前も回す）
+        if (!gameManager || gameManager.state !== 'playing') {
+            this.demoTime += 0.03;
+            window.dispatchEvent(new CustomEvent('ropeUpdate', {
+                detail: { angle: this.demoTime }
+            }));
+        }
         
         // プレイヤーアバターのアニメーション
         const time = Date.now() * 0.001;

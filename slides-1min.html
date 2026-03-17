@@ -245,7 +245,7 @@
         
         <!-- Slide 4: Vision -->
         <div class="slide">
-            <div class="slide-number">4/4</div>
+            <div class="slide-number">4/5</div>
             <div class="big-number">1 億</div>
             <h2>目指す未来</h2>
             <div class="content" style="text-align: center;">
@@ -262,6 +262,36 @@
                 </p>
             </div>
         </div>
+        
+        <!-- Slide 5: Design -->
+        <div class="slide">
+            <div class="slide-number">5/5</div>
+            <h2>技術設計</h2>
+            <div class="content">
+                <div style="display:flex;justify-content:center;gap:40px;margin:30px 0;">
+                    <div style="text-align:center;">
+                        <div style="font-size:48px;">📷</div>
+                        <div style="color:var(--primary);font-weight:bold;">MediaPipe</div>
+                        <div style="font-size:14px;opacity:0.7;">姿勢推定</div>
+                    </div>
+                    <div style="display:flex;align-items:center;font-size:32px;">→</div>
+                    <div style="text-align:center;">
+                        <div style="font-size:48px;">🎮</div>
+                        <div style="color:var(--secondary);font-weight:bold;">GameManager</div>
+                        <div style="font-size:14px;opacity:0.7;">ゲーム制御</div>
+                    </div>
+                    <div style="display:flex;align-items:center;font-size:32px;">→</div>
+                    <div style="text-align:center;">
+                        <div style="font-size:48px;">🤖</div>
+                        <div style="color:var(--primary);font-weight:bold;">Three.js</div>
+                        <div style="font-size:14px;opacity:0.7;">3D 描画</div>
+                    </div>
+                </div>
+                <p style="text-align:center;margin-top:30px;">
+                    <span class="highlight">純粋 JavaScript</span> ・軽量・インストール不要
+                </p>
+            </div>
+        </div>
     </div>
     
     <div class="nav-dots">
@@ -274,7 +304,7 @@
     
     <script>
         let currentSlide = 0;
-        const totalSlides = 4;
+        const totalSlides = 5;
         const slideContainer = document.getElementById('slides');
         const dots = document.querySelectorAll('.dot');
         const progressBar = document.getElementById('progress');
@@ -343,8 +373,8 @@
             }
         });
         
-        // Auto-advance for 1-minute pitch (15 seconds per slide)
-        let autoAdvance = setInterval(nextSlide, 15000);
+        // Auto-advance for 1-minute pitch (12 seconds per slide)
+        let autoAdvance = setInterval(nextSlide, 12000);
         
         // Reset timer on user interaction
         document.addEventListener('click', () => {

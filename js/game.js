@@ -146,8 +146,8 @@ class GameManager {
         this.ropeAngle += this.ropeSpeed;
         
         // 難易度上昇（スコアに応じて速度アップ）
-        const baseSpeed = 0.08;
-        const speedBonus = Math.min(0.04, this.score / 10000);
+        const baseSpeed = 0.1;
+        const speedBonus = Math.min(0.05, this.score / 10000);
         this.ropeSpeed = baseSpeed + speedBonus;
         
         // イベント発火（描画用）
