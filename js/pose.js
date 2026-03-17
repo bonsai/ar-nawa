@@ -57,17 +57,21 @@ class PoseManager {
                 this.setupFallbackDetection();
                 return true;
             }
-            
+
+            // MoveNet Lightning モデルを使用
             const model = poseDetection.SupportedModels.MoveNet;
-            this.detector = await poseDetection.createDetector(model, {
-                modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
-            });
+            const config = {
+                modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                enableSmoothing: true
+            };
             
+            this.detector = await poseDetection.createDetector(model, config);
+
             Utils.log("MediaPipe Pose 初期化完了");
-            
+
             this.isDetecting = true;
             this.detectLoop();
-            
+
             return true;
         } catch (e) {
             Utils.error("姿勢推定初期化エラー:", e);
