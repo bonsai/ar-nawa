@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Tobu! Design Document</title>
+    <style>
+        :root {
+            --primary: #00d9ff;
+            --secondary: #00ff88;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.7);
+            --border: rgba(255,255,255,0.1);
+            --code-bg: #0d1117;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-card) 100%);
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(0,0,0,0.3);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 30px 20px;
+            z-index: 100;
+        }
+        
+        .sidebar h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .sidebar nav ul {
+            list-style: none;
+        }
+        
+        .sidebar nav li {
+            margin-bottom: 8px;
+        }
+        
+        .sidebar nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background: rgba(0,217,255,0.1);
+            color: var(--primary);
+        }
+        
+        .sidebar nav a.active {
+            border-left: 3px solid var(--primary);
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            padding: 60px 80px;
+            max-width: 1200px;
+        }
+        
+        /* Header */
+        header {
+            margin-bottom: 60px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        header h1 {
+            font-size: 42px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        header .meta {
+            display: flex;
+            gap: 30px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        header .meta span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Sections */
+        section {
+            margin-bottom: 60px;
+            scroll-margin-top: 30px;
+        }
+        
+        section h2 {
+            font-size: 28px;
+            color: var(--primary);
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        section h3 {
+            font-size: 20px;
+            color: var(--secondary);
+            margin: 30px 0 15px 0;
+        }
+        
+        section h4 {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Content Elements */
+        p {
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 25px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+        
+        th {
+            background: rgba(0,217,255,0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background: rgba(255,255,255,0.02);
+        }
+        
+        /* Code Blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            color: var(--secondary);
+        }
+        
+        pre code {
+            color: var(--text);
+        }
+        
+        .keyword { color: #ff79c6; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; }
+        .function { color: #8be9fd; }
+        .number { color: #bd93f9; }
+        
+        /* Diagrams */
+        .diagram {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        
+        /* Info Boxes */
+        .info-box {
+            background: rgba(0,217,255,0.05);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning-box {
+            background: rgba(255,165,0,0.05);
+            border-left: 4px solid orange;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        /* Table of Contents */
+        .toc {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+            color: var(--text);
+        }
+        
+        .toc ol {
+            columns: 2;
+            column-gap: 40px;
+        }
+        
+        .toc li {
+            break-inside: avoid;
+        }
+        
+        .toc a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .toc a:hover {
+            color: var(--primary);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            .main-content {
+                margin-left: 240px;
+                padding: 40px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 30px 20px;
+            }
+            .toc ol {
+                columns: 1;
+            }
+            header h1 {
+                font-size: 28px;
+            }
+        }
+        
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        
+        .menu-toggle span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--text);
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+        
+        /* Back to top */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 99;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    
+    <aside class="sidebar" id="sidebar">
+        <h3>📑 目次</h3>
+        <nav>
+            <ul>
+                <li><a href="#section1" class="active">1. 概要</a></li>
+                <li><a href="#section2">2. システム構成</a></li>
+                <li><a href="#section3">3. コンポーネント設計</a></li>
+                <li><a href="#section4">4. データ構造</a></li>
+                <li><a href="#section5">5. ゲームアルゴリズム</a></li>
+                <li><a href="#section6">6. AI フィードバック</a></li>
+                <li><a href="#section7">7. 拡張アーキテクチャ</a></li>
+                <li><a href="#section8">8. パフォーマンス</a></li>
+                <li><a href="#section9">9. セキュリティ</a></li>
+                <li><a href="#section10">10. テスト戦略</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <header>
+            <h1>🤖 AR Tobu! Design Document</h1>
+            <div class="meta">
+                <span>📅 2026-03-17</span>
+                <span>📌 Version 1.0</span>
+                <span>🎮 AI Fitness Game</span>
+            </div>
+        </header>
+        
+        <div class="toc">
+            <h3>📋 目次</h3>
+            <ol>
+                <li><a href="#section1">概要</a></li>
+                <li><a href="#section2">システム構成</a></li>
+                <li><a href="#section3">コンポーネント設計</a></li>
+                <li><a href="#section4">データ構造</a></li>
+                <li><a href="#section5">ゲームアルゴリズム</a></li>
+                <li><a href="#section6">AI フィードバックシステム</a></li>
+                <li><a href="#section7">拡張アーキテクチャ</a></li>
+                <li><a href="#section8">パフォーマンス最適化</a></li>
+                <li><a href="#section9">セキュリティ</a></li>
+                <li><a href="#section10">テスト戦略</a></li>
+            </ol>
+        </div>
+        
+        <section id="section1">
+            <h2>1. 概要</h2>
+            
+            <h3>1.1 プロジェクト目的</h3>
+            <p>Web ブラウザ上で動作する AR 縄跳びゲーム。MediaPipe による姿勢推定と Three.js による 3D 描画を組み合わせ、AI がリアルタイムで運動をガイドする。</p>
+            
+            <h3>1.2 主要機能</h3>
+            <ul>
+                <li>姿勢推定によるジャンプ検出</li>
+                <li>AR 空間での 3D ゲーム描画</li>
+                <li>リアルタイム AI フィードバック</li>
+                <li>スコア・コンボシステム</li>
+                <li>難易度動的調整</li>
+            </ul>
+            
+            <h3>1.3 技術スタック</h3>
+            <table>
+                <tr>
+                    <th>カテゴリ</th>
+                    <th>技術</th>
+                    <th>バージョン</th>
+                </tr>
+                <tr>
+                    <td>3D エンジン</td>
+                    <td>Three.js</td>
+                    <td>r128</td>
+                </tr>
+                <tr>
+                    <td>姿勢推定</td>
+                    <td>MediaPipe Pose</td>
+                    <td>latest</td>
+                </tr>
+                <tr>
+                    <td>AR</td>
+                    <td>WebXR API</td>
+                    <td>Level 2</td>
+                </tr>
+                <tr>
+                    <td>言語</td>
+                    <td>JavaScript</td>
+                    <td>ES2020+</td>
+                </tr>
+                <tr>
+                    <td>実行環境</td>
+                    <td>Web Browser</td>
+                    <td>Chrome 90+</td>
+                </tr>
+            </table>
+        </section>
+        
+        <section id="section2">
+            <h2>2. システム構成</h2>
+            
+            <h3>2.1 アーキテクチャ図</h3>
+            <div class="diagram">┌─────────────────────────────────────────────────────────┐
+│                    Browser Environment                   │
+├─────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────┐                   │
+│  │  HTML/CSS    │    │   Assets     │                   │
+│  │  (UI Layer)  │    │ (Models/Audio)│                  │
+│  └──────────────┘    └──────────────┘                   │
+│           ↓                  ↓                           │
+│  ┌──────────────────────────────────────────┐           │
+│  │         Main Application (main.js)       │           │
+│  └──────────────────────────────────────────┘           │
+│           ↓                  ↓                           │
+│  ┌──────────────┐    ┌──────────────┐                   │
+│  │  ARManager   │    │ PoseManager  │                   │
+│  │  (WebXR)     │    │ (MediaPipe)  │                   │
+│  └──────────────┘    └──────────────┘                   │
+│           ↓                  ↓                           │
+│  ┌──────────────────────────────────────────┐           │
+│  │         GameManager (Game Logic)         │           │
+│  └──────────────────────────────────────────┘           │
+│           ↓                                              │
+│  ┌──────────────┐    ┌──────────────┐                   │
+│  │ RenderManager│    │  Utils       │                   │
+│  │ (Three.js)   │    │ (Helpers)    │                   │
+│  └──────────────┘    └──────────────┘                   │
+└─────────────────────────────────────────────────────────┘</div>
+            
+            <h3>2.2 モジュール依存関係</h3>
+            <div class="diagram">main.js
+  ├── ar.js (ARManager)
+  ├── pose.js (PoseManager)
+  ├── game.js (GameManager)
+  ├── render.js (RenderManager)
+  └── utils.js (Utils)
+
+game.js
+  └── (events) → render.js
+
+pose.js
+  └── (events) → game.js
+
+ar.js
+  └── (events) → game.js</div>
+        </section>
+        
+        <section id="section3">
+            <h2>3. コンポーネント設計</h2>
+            
+            <h3>3.1 ARManager (<code>ar.js</code>)</h3>
+            <p><strong>責任:</strong> WebXR セッション管理、平面検出、AR フォールバック</p>
+            <pre><code><span class="keyword">class</span> <span class="function">ARManager</span> {
+    <span class="comment">// プロパティ</span>
+    session<span class="keyword">:</span> XRSession <span class="keyword">|</span> null
+    referenceSpace<span class="keyword">:</span> XRReferenceSpace <span class="keyword">|</span> null
+    isARSupported<span class="keyword">:</span> boolean
+    floorPosition<span class="keyword">:</span> Vector3 <span class="keyword">|</span> null
+
+    <span class="comment">// メソッド</span>
+    <span class="keyword">async</span> <span class="function">init</span>()<span class="keyword">:</span> <span class="function">Promise</span>&lt;boolean&gt;
+    <span class="keyword">async</span> <span class="function">startSession</span>(glCanvas<span class="keyword">:</span> HTMLCanvasElement)<span class="keyword">:</span> <span class="function">Promise</span>&lt;XRSession <span class="keyword">|</span> null&gt;
+    <span class="function">setupPlaneDetection</span>()<span class="keyword">:</span> void
+    <span class="function">getViewerPose</span>()<span class="keyword">:</span> XRPose <span class="keyword">|</span> null
+    <span class="function">endSession</span>()<span class="keyword">:</span> void
+}</code></pre>
+            <div class="info-box">
+                <strong>イベント:</strong> <code>floorDetected</code> - 床平面検出時
+            </div>
+            
+            <h3>3.2 PoseManager (<code>pose.js</code>)</h3>
+            <p><strong>責任:</strong> MediaPipe 姿勢推定、ジャンプ検出、ジェスチャー認識</p>
+            <pre><code><span class="keyword">class</span> <span class="function">PoseManager</span> {
+    pose<span class="keyword">:</span> Pose
+    camera<span class="keyword">:</span> Camera
+    keypoints<span class="keyword">:</span> Keypoint[]
+    isJumping<span class="keyword">:</span> boolean
+
+    <span class="keyword">async</span> <span class="function">init</span>(videoElement<span class="keyword">:</span> HTMLVideoElement)<span class="keyword">:</span> <span class="function">Promise</span>&lt;void&gt;
+    <span class="function">onResults</span>(results<span class="keyword">:</span> PoseResults)<span class="keyword">:</span> void
+    <span class="function">detectJump</span>(keypoints<span class="keyword">:</span> Keypoint[])<span class="keyword">:</span> boolean
+    <span class="function">detectWaveGesture</span>(keypoints<span class="keyword">:</span> Keypoint[])<span class="keyword">:</span> boolean
+    <span class="function">calculateJumpHeight</span>(keypoints<span class="keyword">:</span> Keypoint[])<span class="keyword">:</span> number
+}</code></pre>
+            
+            <h3>3.3 GameManager (<code>game.js</code>)</h3>
+            <p><strong>責任:</strong> ゲーム状態管理、スコア計算、難易度調整、AI フィードバック</p>
+            <pre><code><span class="keyword">class</span> <span class="function">GameManager</span> {
+    state<span class="keyword">:</span> <span class="string">'idle'</span> <span class="keyword">|</span> <span class="string">'countdown'</span> <span class="keyword">|</span> <span class="string">'playing'</span> <span class="keyword">|</span> <span class="string">'gameover'</span>
+    score<span class="keyword">:</span> number
+    combo<span class="keyword">:</span> number
+    ropeAngle<span class="keyword">:</span> number
+    ropeSpeed<span class="keyword">:</span> number
+    floorPosition<span class="keyword">:</span> Vector3 <span class="keyword">|</span> null
+    playerState<span class="keyword">:</span> <span class="string">'ground'</span> <span class="keyword">|</span> <span class="string">'jumping'</span>
+
+    <span class="function">startGame</span>()<span class="keyword">:</span> void
+    <span class="function">gameLoop</span>()<span class="keyword">:</span> void
+    <span class="function">onJumpDetected</span>(jumpData<span class="keyword">:</span> JumpData)<span class="keyword">:</span> void
+    <span class="function">onHitByRope</span>()<span class="keyword">:</span> void
+    <span class="function">detectWaveGesture</span>(keypoints<span class="keyword">:</span> Keypoint[])<span class="keyword">:</span> void
+    <span class="function">gameOver</span>()<span class="keyword">:</span> void
+    <span class="function">updateUI</span>()<span class="keyword">:</span> void
+    <span class="function">reset</span>()<span class="keyword">:</span> void
+}</code></pre>
+            
+            <h3>3.4 RenderManager (<code>render.js</code>)</h3>
+            <p><strong>責任:</strong> Three.js シーン管理、3D オブジェクト描画、アニメーション</p>
+            <pre><code><span class="keyword">class</span> <span class="function">RenderManager</span> {
+    scene<span class="keyword">:</span> THREE.Scene
+    camera<span class="keyword">:</span> THREE.PerspectiveCamera
+    renderer<span class="keyword">:</span> THREE.WebGLRenderer
+    rope<span class="keyword">:</span> THREE.Mesh
+    robots<span class="keyword">:</span> Robot[]
+
+    <span class="function">init</span>(glCanvas<span class="keyword">:</span> HTMLCanvasElement)<span class="keyword">:</span> void
+    <span class="function">createScene</span>()<span class="keyword">:</span> void
+    <span class="function">createRobots</span>()<span class="keyword">:</span> void
+    <span class="function">createRope</span>()<span class="keyword">:</span> void
+    <span class="function">updateRope</span>(angle<span class="keyword">:</span> number)<span class="keyword">:</span> void
+    <span class="function">render</span>()<span class="keyword">:</span> void
+}</code></pre>
+        </section>
+        
+        <section id="section4">
+            <h2>4. データ構造</h2>
+            
+            <h3>4.1 基本データ型</h3>
+            <pre><code><span class="comment">// 3D ベクトル</span>
+<span class="keyword">interface</span> <span class="function">Vector3</span> {
+    x<span class="keyword">:</span> number
+    y<span class="keyword">:</span> number
+    z<span class="keyword">:</span> number
+}
+
+<span class="comment">// 姿勢キーポイント</span>
+<span class="keyword">interface</span> <span class="function">Keypoint</span> {
+    name<span class="keyword">:</span> string          <span class="comment">// e.g. "nose", "left_wrist"</span>
+    x<span class="keyword">:</span> number             <span class="comment">// 0-1 (正規化)</span>
+    y<span class="keyword">:</span> number             <span class="comment">// 0-1 (正規化)</span>
+    z<span class="keyword">:</span> number             <span class="comment">// 深度</span>
+    score<span class="keyword">:</span> number         <span class="comment">// 信頼度 0-1</span>
+}
+
+<span class="comment">// ジャンプデータ</span>
+<span class="keyword">interface</span> <span class="function">JumpData</span> {
+    timestamp<span class="keyword">:</span> number
+    height<span class="keyword">:</span> number        <span class="comment">// cm</span>
+    duration<span class="keyword">:</span> number      <span class="comment">// ms</span>
+    fallback<span class="keyword">:</span> boolean     <span class="comment">// 簡易検出フラグ</span>
+}
+
+<span class="comment">// ゲーム状態</span>
+<span class="keyword">interface</span> <span class="function">GameState</span> {
+    state<span class="keyword">:</span> string
+    score<span class="keyword">:</span> number
+    combo<span class="keyword">:</span> number
+    maxCombo<span class="keyword">:</span> number
+    failCount<span class="keyword">:</span> number
+    ropeAngle<span class="keyword">:</span> number
+    ropeSpeed<span class="keyword">:</span> number
+}</code></pre>
+            
+            <h3>4.2 設定パラメータ</h3>
+            <pre><code><span class="keyword">const</span> GAME_CONFIG <span class="keyword">=</span> {
+    <span class="comment">// ジャンプ判定</span>
+    JUMP_WINDOW<span class="keyword">:</span> <span class="number">0.25</span>,           <span class="comment">// ラジアン、縄の許容範囲</span>
+    JUMP_THRESHOLD<span class="keyword">:</span> <span class="number">0.3</span>,         <span class="comment">// 姿勢推定ジャンプ閾値</span>
+    JUMP_COOLDOWN<span class="keyword">:</span> <span class="number">500</span>,          <span class="comment">// ms, 連続ジャンプ防止</span>
+
+    <span class="comment">// スコア計算</span>
+    BASE_SCORE<span class="keyword">:</span> <span class="number">100</span>,             <span class="comment">// 基本点</span>
+    COMBO_MULTIPLIER_MAX<span class="keyword">:</span> <span class="number">10</span>,    <span class="comment">// 最大コンボ倍率</span>
+    SPEED_BONUS_MAX<span class="keyword">:</span> <span class="number">0.04</span>,       <span class="comment">// 速度ボーナス上限</span>
+
+    <span class="comment">// 難易度</span>
+    BASE_ROPE_SPEED<span class="keyword">:</span> <span class="number">0.08</span>,       <span class="comment">// 基本速度 rad/frame</span>
+    SPEED_INCREMENT<span class="keyword">:</span> <span class="number">0.001</span>,      <span class="comment">// スコア増加による速度上昇</span>
+    MAX_FAILS<span class="keyword">:</span> <span class="number">3</span>,                <span class="comment">// ゲームオーバーまでの失敗回数</span>
+
+    <span class="comment">// ジェスチャー</span>
+    HANDS_UP_THRESHOLD<span class="keyword">:</span> <span class="number">0.7</span>,     <span class="comment">// 頭上判定閾値</span>
+    GESTURE_COOLDOWN<span class="keyword">:</span> <span class="number">500</span>,       <span class="comment">// ms, ジェスチャー認識間隔</span>
+}</code></pre>
+            
+            <h3>4.3 ロボット配置</h3>
+            <pre><code><span class="comment">// 3 体のロボット位置（ローカル座標系）</span>
+<span class="keyword">const</span> ROBOT_POSITIONS <span class="keyword">=</span> [
+    { x<span class="keyword">:</span> <span class="number">-1.5</span>, y<span class="keyword">:</span> <span class="number">0</span>, z<span class="keyword">:</span> <span class="number">0</span> },   <span class="comment">// 左ロボット</span>
+    { x<span class="keyword">:</span> <span class="number">1.5</span>, y<span class="keyword">:</span> <span class="number">0</span>, z<span class="keyword">:</span> <span class="number">0</span> },    <span class="comment">// 右ロボット</span>
+    { x<span class="keyword">:</span> <span class="number">0</span>, y<span class="keyword">:</span> <span class="number">0</span>, z<span class="keyword">:</span> <span class="number">-2</span> }      <span class="comment">// 奥ロボット（リーダー）</span>
+]
+
+<span class="comment">// 縄の物理パラメータ</span>
+<span class="keyword">const</span> ROPE_PHYSICS <span class="keyword">=</span> {
+    length<span class="keyword">:</span> <span class="number">3.5</span>,               <span class="comment">// 縄の長さ（メートル）</span>
+    sag<span class="keyword">:</span> <span class="number">0.3</span>,                  <span class="comment">// 縄のたわみ</span>
+    rotationAxis<span class="keyword">:</span> <span class="string">'x'</span>,         <span class="comment">// 回転軸</span>
+}</code></pre>
+        </section>
+        
+        <section id="section5">
+            <h2>5. ゲームアルゴリズム</h2>
+            
+            <h3>5.1 ジャンプ判定アルゴリズム</h3>
+            <pre><code><span class="comment">/**
+ * ジャンプ成功判定
+ */</span>
+<span class="keyword">function</span> <span class="function">judgeJump</span>(ropeAngle, jumpData) {
+    <span class="comment">// 縄の垂直位置を計算（-1〜1）</span>
+    <span class="keyword">const</span> ropeY <span class="keyword">=</span> Math.<span class="function">sin</span>(ropeAngle)
+    
+    <span class="comment">// 縄が下の位置か判定</span>
+    <span class="keyword">const</span> isRopeLow <span class="keyword">=</span> ropeY <span class="keyword">&lt;</span> <span class="number">-0.5</span>
+    
+    <span class="comment">// ジャンプタイミングウィンドウ内か判定</span>
+    <span class="keyword">const</span> inWindow <span class="keyword">=</span> Math.<span class="function">abs</span>(ropeY) <span class="keyword">&lt;</span> GAME_CONFIG.JUMP_WINDOW
+    
+    <span class="comment">// 成功条件：縄が下かつタイミングウィンドウ内</span>
+    <span class="keyword">return</span> isRopeLow <span class="keyword">&amp;&amp;</span> inWindow
+}</code></pre>
+            
+            <h3>5.2 スコア計算アルゴリズム</h3>
+            <pre><code><span class="comment">/**
+ * スコア計算
+ */</span>
+<span class="keyword">function</span> <span class="function">calculateScore</span>(baseScore, combo, jumpHeight) {
+    <span class="comment">// コンボ倍率（最大 10 倍）</span>
+    <span class="keyword">const</span> comboMultiplier <span class="keyword">=</span> Math.<span class="function">min</span>(combo, GAME_CONFIG.COMBO_MULTIPLIER_MAX)
+    
+    <span class="comment">// 高さボーナス（理想高さ 30cm に近いほど高得点）</span>
+    <span class="keyword">const</span> idealHeight <span class="keyword">=</span> <span class="number">30</span>
+    <span class="keyword">const</span> heightDiff <span class="keyword">=</span> Math.<span class="function">abs</span>(jumpHeight <span class="keyword">-</span> idealHeight)
+    <span class="keyword">const</span> heightBonus <span class="keyword">=</span> Math.<span class="function">max</span>(<span class="number">0</span>, <span class="number">1</span> <span class="keyword">-</span> heightDiff <span class="keyword">/</span> <span class="number">20</span>)
+    
+    <span class="comment">// 最終スコア</span>
+    <span class="keyword">const</span> score <span class="keyword">=</span> baseScore <span class="keyword">*</span> comboMultiplier <span class="keyword">*</span> (<span class="number">1</span> <span class="keyword">+</span> heightBonus <span class="keyword">*</span> <span class="number">0.5</span>)
+    
+    <span class="keyword">return</span> Math.<span class="function">floor</span>(score)
+}</code></pre>
+            
+            <h3>5.3 難易度調整アルゴリズム</h3>
+            <pre><code><span class="comment">/**
+ * 難易度動的調整
+ */</span>
+<span class="keyword">function</span> <span class="function">calculateRopeSpeed</span>(currentScore, currentCombo) {
+    <span class="keyword">const</span> baseSpeed <span class="keyword">=</span> GAME_CONFIG.BASE_ROPE_SPEED
+    
+    <span class="comment">// スコアによる速度上昇（上限あり）</span>
+    <span class="keyword">const</span> speedBonus <span class="keyword">=</span> Math.<span class="function">min</span>(
+        GAME_CONFIG.SPEED_BONUS_MAX,
+        currentScore <span class="keyword">/</span> <span class="number">10000</span>
+    )
+    
+    <span class="comment">// コンボによるボーナス</span>
+    <span class="keyword">const</span> comboBonus <span class="keyword">=</span> currentCombo <span class="keyword">&gt;=</span> <span class="number">5</span> <span class="keyword">?</span> <span class="number">0.01</span> <span class="keyword">:</span> <span class="number">0</span>
+    
+    <span class="keyword">return</span> baseSpeed <span class="keyword">+</span> speedBonus <span class="keyword">+</span> comboBonus
+}</code></pre>
+        </section>
+        
+        <section id="section6">
+            <h2>6. AI フィードバックシステム</h2>
+            
+            <h3>6.1 フィードバック生成エンジン</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">AIFeedbackEngine</span> {
+    <span class="function">constructor</span>() {
+        <span class="keyword">this</span>.feedbackTemplates <span class="keyword">=</span> {
+            success<span class="keyword">:</span> [<span class="string">"ナイスジャンプ！"</span>, <span class="string">"いいリズム！"</span>, <span class="string">"コンボ継続中！"</span>],
+            encouragement<span class="keyword">:</span> [<span class="string">"あと少し！"</span>, <span class="string">"もっと高く跳んで！"</span>],
+            advice<span class="keyword">:</span> [<span class="string">"膝を曲げて準備しよう"</span>, <span class="string">"腕を振って跳ぶといいよ"</span>],
+            celebration<span class="keyword">:</span> [<span class="string">"新記録更新！"</span>, <span class="string">"神業ジャンプ！"</span>]
+        }
+    }
+
+    <span class="function">generateFeedback</span>(context) {
+        <span class="keyword">const</span> { score, combo, jumpSuccess, newRecord } <span class="keyword">=</span> context
+        
+        <span class="keyword">if</span> (newRecord) <span class="keyword">return</span> <span class="keyword">this</span>.<span class="function">selectRandom</span>(<span class="keyword">this</span>.feedbackTemplates.celebration)
+        <span class="keyword">if</span> (jumpSuccess) <span class="keyword">return</span> <span class="keyword">this</span>.<span class="function">selectRandom</span>(<span class="keyword">this</span>.feedbackTemplates.success)
+        <span class="keyword">return</span> <span class="keyword">this</span>.<span class="function">selectRandom</span>(<span class="keyword">this</span>.feedbackTemplates.encouragement)
+    }
+}</code></pre>
+            
+            <h3>6.2 音声フィードバック</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">AudioFeedbackManager</span> {
+    <span class="function">constructor</span>() {
+        <span class="keyword">this</span>.synth <span class="keyword">=</span> window.speechSynthesis
+        <span class="keyword">this</span>.enabled <span class="keyword">=</span> <span class="keyword">true</span>
+        <span class="keyword">this</span>.feedbackCooldown <span class="keyword">=</span> <span class="number">2000</span>  <span class="comment">// 2 秒間隔</span>
+    }
+
+    <span class="function">speak</span>(text) {
+        <span class="keyword">const</span> utterance <span class="keyword">=</span> <span class="keyword">new</span> <span class="function">SpeechSynthesisUtterance</span>(text)
+        utterance.lang <span class="keyword">=</span> <span class="string">'ja-JP'</span>
+        utterance.rate <span class="keyword">=</span> <span class="number">1.2</span>
+        utterance.pitch <span class="keyword">=</span> <span class="number">1.1</span>
+        <span class="keyword">this</span>.synth.<span class="function">speak</span>(utterance)
+    }
+}</code></pre>
+        </section>
+        
+        <section id="section7">
+            <h2>7. 拡張アーキテクチャ</h2>
+            
+            <h3>7.1 新種目追加インターフェース</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">GameMode</span> {
+    <span class="function">constructor</span>(name) {
+        <span class="keyword">this</span>.name <span class="keyword">=</span> name
+        <span class="keyword">this</span>.config <span class="keyword">=</span> {}
+    }
+    
+    <span class="function">init</span>() { <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Must implement init()'</span>) }
+    <span class="function">update</span>(deltaTime) { <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Must implement update()'</span>) }
+    <span class="function">judge</span>(playerAction, gameState) { <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Must implement judge()'</span>) }
+    <span class="function">calculateScore</span>(judgeResult) { <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Must implement calculateScore()'</span>) }
+}
+
+<span class="comment">// 例：二重跳びモード</span>
+<span class="keyword">class</span> <span class="function">DoubleUndersMode</span> <span class="keyword">extends</span> <span class="function">GameMode</span> {
+    <span class="function">constructor</span>() {
+        <span class="keyword">super</span>(<span class="string">'double_unders'</span>)
+        <span class="keyword">this</span>.config <span class="keyword">=</span> {
+            ropeSpeed<span class="keyword">:</span> <span class="number">0.15</span>,
+            jumpWindow<span class="keyword">:</span> <span class="number">0.15</span>,
+            requiredHeight<span class="keyword">:</span> <span class="number">40</span>
+        }
+    }
+}</code></pre>
+            
+            <h3>7.2 マルチプレイ</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">MultiplayerManager</span> {
+    <span class="keyword">async</span> <span class="function">createRoom</span>() {
+        <span class="keyword">this</span>.ws <span class="keyword">=</span> <span class="keyword">new</span> <span class="function">WebSocket</span>(<span class="string">'wss://ar-tobi-server.example/multiplayer'</span>)
+        <span class="keyword">this</span>.ws.<span class="function">send</span>(JSON.<span class="function">stringify</span>({
+            type<span class="keyword">:</span> <span class="string">'create_room'</span>,
+            gameMode<span class="keyword">:</span> <span class="string">'rope_jump'</span>
+        }))
+    }
+    
+    <span class="function">syncGameState</span>(gameState) {
+        <span class="keyword">this</span>.ws.<span class="function">send</span>(JSON.<span class="function">stringify</span>({
+            type<span class="keyword">:</span> <span class="string">'game_state'</span>,
+            state<span class="keyword">:</span> gameState,
+            timestamp<span class="keyword">:</span> Date.<span class="function">now</span>()
+        }))
+    }
+}</code></pre>
+        </section>
+        
+        <section id="section8">
+            <h2>8. パフォーマンス最適化</h2>
+            
+            <h3>8.1 描画最適化</h3>
+            <pre><code><span class="comment">// 1. ジオメトリのインスタンス化</span>
+<span class="keyword">const</span> robotGeometry <span class="keyword">=</span> <span class="keyword">new</span> <span class="function">THREE.SphereGeometry</span>(<span class="number">0.3</span>, <span class="number">16</span>, <span class="number">16</span>)
+<span class="keyword">const</span> robotMaterial <span class="keyword">=</span> <span class="keyword">new</span> <span class="function">THREE.MeshPhongMaterial</span>({ color<span class="keyword">:</span> <span class="number">0x00ff00</span> })
+
+<span class="comment">// 2. フレームレート制限</span>
+<span class="keyword">const</span> targetFPS <span class="keyword">=</span> <span class="number">60</span>
+<span class="keyword">const</span> frameInterval <span class="keyword">=</span> <span class="number">1000</span> <span class="keyword">/</span> targetFPS
+
+<span class="comment">// 3. 不要な再描画回避</span>
+<span class="keyword">let</span> sceneDirty <span class="keyword">=</span> <span class="keyword">false</span>
+<span class="keyword">function</span> <span class="function">markSceneDirty</span>() { sceneDirty <span class="keyword">=</span> <span class="keyword">true</span> }</code></pre>
+            
+            <h3>8.2 姿勢推定最適化</h3>
+            <pre><code><span class="keyword">const</span> poseConfig <span class="keyword">=</span> {
+    modelComplexity<span class="keyword">:</span> <span class="number">1</span>,      <span class="comment">// 0: 軽量，1: 標準，2: 高精度</span>
+    smoothLandmarks<span class="keyword">:</span> <span class="keyword">true</span>,   <span class="comment">// 時間的平滑化</span>
+    enableSegmentation<span class="keyword">:</span> <span class="keyword">false</span>,
+    minDetectionConfidence<span class="keyword">:</span> <span class="number">0.5</span>,
+    minTrackingConfidence<span class="keyword">:</span> <span class="number">0.5</span>
+}
+
+<span class="comment">// フレームスキップ</span>
+<span class="keyword">const</span> skipFrames <span class="keyword">=</span> <span class="number">2</span>  <span class="comment">// 3 フレームに 1 回処理</span></code></pre>
+            
+            <h3>8.3 メモリ管理</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">ObjectPool</span> {
+    <span class="function">constructor</span>(createFn, resetFn, initialSize <span class="keyword">=</span> <span class="number">10</span>) {
+        <span class="keyword">this</span>.createFn <span class="keyword">=</span> createFn
+        <span class="keyword">this</span>.resetFn <span class="keyword">=</span> resetFn
+        <span class="keyword">this</span>.pool <span class="keyword">=</span> []
+        <span class="keyword">for</span> (<span class="keyword">let</span> i <span class="keyword">=</span> <span class="number">0</span>; i <span class="keyword">&lt;</span> initialSize; i<span class="keyword">++</span>) {
+            <span class="keyword">this</span>.pool.<span class="function">push</span>(<span class="function">createFn</span>())
+        }
+    }
+
+    <span class="function">acquire</span>() {
+        <span class="keyword">return</span> <span class="keyword">this</span>.pool.length <span class="keyword">&gt;</span> <span class="number">0</span> 
+            <span class="keyword">?</span> <span class="keyword">this</span>.pool.<span class="function">pop</span>() 
+            <span class="keyword">:</span> <span class="function">createFn</span>()
+    }
+
+    <span class="function">release</span>(obj) {
+        <span class="function">resetFn</span>(obj)
+        <span class="keyword">this</span>.pool.<span class="function">push</span>(obj)
+    }
+}</code></pre>
+        </section>
+        
+        <section id="section9">
+            <h2>9. セキュリティ</h2>
+            
+            <h3>9.1 プライバシー保護</h3>
+            <div class="info-box">
+                <strong>重要:</strong> カメラ映像は全てローカル処理。サーバーへの送信なし。
+            </div>
+            <pre><code><span class="keyword">class</span> <span class="function">PrivacyManager</span> {
+    <span class="keyword">async</span> <span class="function">startCamera</span>() {
+        <span class="keyword">this</span>.videoStream <span class="keyword">=</span> <span class="keyword">await</span> navigator.mediaDevices.<span class="function">getUserMedia</span>({
+            video<span class="keyword">:</span> {
+                width<span class="keyword">:</span> { ideal<span class="keyword">:</span> <span class="number">640</span> },
+                height<span class="keyword">:</span> { ideal<span class="keyword">:</span> <span class="number">480</span> }
+            }
+        })
+        <span class="keyword">this</span>.<span class="function">processLocally</span>()
+    }
+
+    <span class="function">processLocally</span>() {
+        <span class="comment">// MediaPipe は完全にローカルで実行</span>
+    }
+
+    <span class="function">stopCamera</span>() {
+        <span class="keyword">if</span> (<span class="keyword">this</span>.videoStream) {
+            <span class="keyword">this</span>.videoStream.<span class="function">getTracks</span>().<span class="function">forEach</span>(track <span class="keyword">=&gt;</span> track.<span class="function">stop</span>())
+        }
+    }
+}</code></pre>
+            
+            <h3>9.2 XSS 対策</h3>
+            <pre><code><span class="keyword">class</span> <span class="function">SecurityUtils</span> {
+    <span class="keyword">static</span> <span class="function">sanitizeHTML</span>(str) {
+        <span class="keyword">const</span> div <span class="keyword">=</span> document.<span class="function">createElement</span>(<span class="string">'div'</span>)
+        div.textContent <span class="keyword">=</span> str
+        <span class="keyword">return</span> div.innerHTML
+    }
+
+    <span class="keyword">static</span> <span class="function">safeDisplayMessage</span>(message) {
+        <span class="keyword">const</span> safeMsg <span class="keyword">=</span> <span class="keyword">this</span>.<span class="function">sanitizeHTML</span>(message)
+        document.<span class="function">getElementById</span>(<span class="string">'message'</span>).textContent <span class="keyword">=</span> safeMsg
+    }
+}</code></pre>
+        </section>
+        
+        <section id="section10">
+            <h2>10. テスト戦略</h2>
+            
+            <h3>10.1 ユニットテスト</h3>
+            <pre><code><span class="function">describe</span>(<span class="string">'GameManager'</span>, () <span class="keyword">=&gt;</span> {
+    <span class="function">test</span>(<span class="string">'初期状態は idle'</span>, () <span class="keyword">=&gt;</span> {
+        <span class="function">expect</span>(gameManager.state).<span class="function">toBe</span>(<span class="string">'idle'</span>)
+        <span class="function">expect</span>(gameManager.score).<span class="function">toBe</span>(<span class="number">0</span>)
+        <span class="function">expect</span>(gameManager.combo).<span class="function">toBe</span>(<span class="number">1</span>)
+    })
+
+    <span class="function">test</span>(<span class="string">'ジャンプ成功でスコア加算'</span>, () <span class="keyword">=&gt;</span> {
+        gameManager.state <span class="keyword">=</span> <span class="string">'playing'</span>
+        gameManager.<span class="function">onJumpDetected</span>({ timestamp<span class="keyword">:</span> Date.<span class="function">now</span>(), height<span class="keyword">:</span> <span class="number">30</span> })
+        <span class="function">expect</span>(gameManager.score).<span class="function">toBeGreaterThan</span>(<span class="number">0</span>)
+    })
+
+    <span class="function">test</span>(<span class="string">'3 回失敗でゲームオーバー'</span>, () <span class="keyword">=&gt;</span> {
+        <span class="keyword">for</span> (<span class="keyword">let</span> i <span class="keyword">=</span> <span class="number">0</span>; i <span class="keyword">&lt;</span> <span class="number">3</span>; i<span class="keyword">++</span>) {
+            gameManager.<span class="function">onHitByRope</span>()
+        }
+        <span class="function">expect</span>(gameManager.state).<span class="function">toBe</span>(<span class="string">'gameover'</span>)
+    })
+})</code></pre>
+            
+            <h3>10.2 パフォーマンステスト</h3>
+            <pre><code><span class="function">test</span>(<span class="string">'60FPS でレンダリング'</span>, <span class="keyword">async</span> () <span class="keyword">=&gt;</span> {
+    <span class="keyword">const</span> fpsMeasurements <span class="keyword">=</span> []
+    <span class="keyword">let</span> frameCount <span class="keyword">=</span> <span class="number">0</span>
+    <span class="keyword">let</span> startTime <span class="keyword">=</span> performance.<span class="function">now</span>()
+
+    <span class="keyword">function</span> <span class="function">measureFrame</span>() {
+        frameCount<span class="keyword">++</span>
+        <span class="keyword">const</span> elapsed <span class="keyword">=</span> performance.<span class="function">now</span>() <span class="keyword">-</span> startTime
+        <span class="keyword">if</span> (elapsed <span class="keyword">&gt;=</span> <span class="number">1000</span>) {
+            fpsMeasurements.<span class="function">push</span>(frameCount)
+            frameCount <span class="keyword">=</span> <span class="number">0</span>
+            startTime <span class="keyword">=</span> performance.<span class="function">now</span>()
+        }
+        <span class="keyword">if</span> (fpsMeasurements.length <span class="keyword">&lt;</span> <span class="number">5</span>) {
+            <span class="function">requestAnimationFrame</span>(measureFrame)
+        }
+    }
+
+    <span class="function">measureFrame</span>()
+    <span class="keyword">await</span> <span class="function">sleep</span>(<span class="number">5000</span>)
+    <span class="keyword">const</span> avgFPS <span class="keyword">=</span> fpsMeasurements.<span class="function">reduce</span>((a, b) <span class="keyword">=&gt;</span> a <span class="keyword">+</span> b, <span class="number">0</span>) <span class="keyword">/</span> fpsMeasurements.length
+    <span class="function">expect</span>(avgFPS).<span class="function">toBeGreaterThanOrEqual</span>(<span class="number">55</span>)
+})</code></pre>
+        </section>
+        
+        <section>
+            <h2>付録 A: 開発環境セットアップ</h2>
+            <pre><code><span class="comment"># 1. リポジトリクローン</span>
+git clone https://github.com/ar-tobi/ar-tobi.git
+<span class="function">cd</span> ar-tobi
+
+<span class="comment"># 2. ローカルサーバー起動</span>
+
+<span class="comment"># Python</span>
+python -m http.server 8080
+
+<span class="comment"># Node.js</span>
+npx http-server -p 8080
+
+<span class="comment"># 3. ブラウザでアクセス</span>
+open http://localhost:8080</code></pre>
+        </section>
+        
+        <section>
+            <h2>付録 B: デバッグコマンド</h2>
+            <pre><code><span class="comment">// ブラウザコンソールで使用可能</span>
+
+<span class="comment">// ゲーム強制スタート</span>
+<span class="function">startGame</span>()
+
+<span class="comment">// ゲームリセット</span>
+<span class="function">resetGame</span>()
+
+<span class="comment">// 現在の状態表示</span>
+console.<span class="function">log</span>(gameManager.state)
+console.<span class="function">log</span>(<span class="string">'Score:'</span>, gameManager.score)
+console.<span class="function">log</span>(<span class="string">'Combo:'</span>, gameManager.combo)
+
+<span class="comment">// フレームレート表示</span>
+<span class="function">showFPS</span>()
+
+<span class="comment">// 姿勢推定デバッグ表示</span>
+<span class="function">togglePoseDebug</span>()</code></pre>
+        </section>
+    </main>
+    
+    <div class="back-to-top" onclick="scrollToTop()">↑</div>
+    
+    <script>
+        // Sidebar navigation highlighting
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.sidebar nav a');
+        
+        function updateActiveNav() {
+            const scrollPos = window.scrollY + 100;
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                const sectionId = section.getAttribute('id');
+                
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${sectionId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', () => {
+            updateActiveNav();
+            
+            // Back to top button
+            const backToTop = document.querySelector('.back-to-top');
+            if (window.scrollY > 500) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        });
+        
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const target = document.querySelector(targetId);
+                
+                if (target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 30,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close mobile sidebar
+                    document.getElementById('sidebar').classList.remove('open');
+                }
+            });
+        });
+        
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        // Scroll to top
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Initialize
+        updateActiveNav();
+    </script>
+</body>
+</html>

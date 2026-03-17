@@ -31,6 +31,16 @@ class RenderManager {
             right: false,
             up: false
         };
+        
+        // ポーズメッシュ表示
+        this.poseMesh = null;
+        this.poseLandmarks = [];
+        
+        // ジャンプ検出用
+        this.baseFootY = undefined;
+        this.lastFootY = undefined;
+        this.jumpState = 'ground';
+        this.jumpStartTime = 0;
     }
     
     init() {
@@ -39,6 +49,7 @@ class RenderManager {
         this.createScene();
         this.createRobots();
         this.createPlayerAvatar();
+        this.createPoseMesh();
         this.createRope();
         this.createFloorMarker();
         this.setupEventListeners();
@@ -287,6 +298,61 @@ class RenderManager {
         Utils.log("プレイヤーアバター作成完了");
     }
     
+    createPoseMesh() {
+        // ポーズメッシュ（MediaPipe のランドマークを表示）
+        this.poseMesh = new THREE.Group();
+        
+        // 33 個のランドマーク用スフィア
+        const landmarkGeom = new THREE.SphereGeometry(0.05, 8, 8);
+        const landmarkMat = new THREE.MeshBasicMaterial({ 
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        this.landmarkPoints = [];
+        for (let i = 0; i < 33; i++) {
+            const point = new THREE.Mesh(landmarkGeom, landmarkMat);
+            point.visible = false;
+            this.poseMesh.add(point);
+            this.landmarkPoints.push(point);
+        }
+        
+        // 接続ライン（ボーン）
+        const connections = [
+            [0, 1], [1, 2], [2, 3], [3, 7],  // 頭
+            [0, 4], [4, 5], [5, 6],          // 左腕
+            [0, 10], [10, 11], [11, 12],     // 右腕
+            [11, 23], [12, 24],              // 体幹
+            [23, 24],                         // 腰
+            [23, 25], [25, 27], [27, 29], [29, 31],  // 左脚
+            [24, 26], [26, 28], [28, 30], [30, 32]   // 右脚
+        ];
+        
+        this.boneLines = [];
+        const lineMat = new THREE.LineBasicMaterial({ 
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.5
+        });
+        
+        connections.forEach(conn => {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(6);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const line = new THREE.Line(geometry, lineMat);
+            line.visible = false;
+            this.poseMesh.add(line);
+            this.boneLines.push({ line, conn });
+        });
+        
+        // 鏡像変換（カメラ映像と合わせる）
+        this.poseMesh.scale.x = -1;
+        
+        this.scene.add(this.poseMesh);
+        Utils.log("ポーズメッシュ作成完了");
+    }
+    
     createRope() {
         // パーティクルで光の縄を表現
         const particleCount = 30;
@@ -453,6 +519,7 @@ class RenderManager {
         
         window.addEventListener('poseUpdate', (e) => {
             this.updateAvatarFromPose(e.detail);
+            this.updatePoseMesh(e.detail);
         });
         
         window.addEventListener('avatarUpdate', (e) => {
@@ -516,12 +583,124 @@ class RenderManager {
         Utils.log("ロボット配置完了");
     }
     
+    updatePoseMesh(detail) {
+        if (!this.poseMesh || !detail.keypoints) return;
+        
+        const keypoints = detail.keypoints;
+        const hasValidPose = keypoints.some(kp => kp.visibility > 0.3);
+        
+        if (!hasValidPose) {
+            this.poseMesh.visible = false;
+            return;
+        }
+        
+        this.poseMesh.visible = true;
+        
+        // ジャンプ検出（足首の位置から）
+        this.detectJumpFromPose(keypoints);
+        
+        // ランドマーク位置更新
+        for (let i = 0; i < Math.min(33, keypoints.length); i++) {
+            const kp = keypoints[i];
+            if (kp.visibility > 0.3) {
+                // 3D 座標に変換（簡易）
+                const x = (kp.x - 0.5) * 3;
+                const y = (0.5 - kp.y) * 3 + 1;
+                const z = kp.z || 0;
+                
+                this.landmarkPoints[i].position.set(x, y, z);
+                this.landmarkPoints[i].visible = true;
+            } else {
+                this.landmarkPoints[i].visible = false;
+            }
+        }
+        
+        // ボーンライン更新
+        this.boneLines.forEach(({ line, conn }) => {
+            const [i, j] = conn;
+            const posA = this.landmarkPoints[i].position;
+            const posB = this.landmarkPoints[j].position;
+            
+            if (this.landmarkPoints[i].visible && this.landmarkPoints[j].visible) {
+                const positions = line.geometry.attributes.position.array;
+                positions[0] = posA.x;
+                positions[1] = posA.y;
+                positions[2] = posA.z;
+                positions[3] = posB.x;
+                positions[4] = posB.y;
+                positions[5] = posB.z;
+                line.geometry.attributes.position.needsUpdate = true;
+                line.visible = true;
+            } else {
+                line.visible = false;
+            }
+        });
+    }
+    
+    detectJumpFromPose(keypoints) {
+        // 足首のキーポイントを取得（MediaPipe 索引：27=左足首，28=右足首）
+        const leftAnkle = keypoints[27];
+        const rightAnkle = keypoints[28];
+        const nose = keypoints[0];
+        
+        if (!leftAnkle || !rightAnkle || !nose) return;
+        
+        if (leftAnkle.visibility < 0.3 || rightAnkle.visibility < 0.3) return;
+        
+        // 両足の平均 Y 位置
+        const avgFootY = (leftAnkle.y + rightAnkle.y) / 2;
+        
+        // 基準位置の初期化
+        if (this.baseFootY === undefined) {
+            this.baseFootY = avgFootY;
+            this.lastFootY = avgFootY;
+            this.jumpState = 'ground';
+            return;
+        }
+        
+        // 基準位置を徐々に更新
+        this.baseFootY = this.baseFootY * 0.95 + avgFootY * 0.05;
+        
+        // 変位量（正：上昇、負：下降）
+        const displacement = this.baseFootY - avgFootY;
+        
+        const now = Date.now();
+        
+        // 状態遷移
+        if (displacement > 0.08 && this.jumpState === 'ground') {
+            this.jumpState = 'rising';
+            this.jumpStartTime = now;
+        } else if (displacement < -0.03 && this.jumpState === 'rising') {
+            this.jumpState = 'falling';
+        } else if (Math.abs(displacement) < 0.02 && this.jumpState === 'falling') {
+            this.jumpState = 'ground';
+            
+            // ジャンプ完了としてゲームに通知
+            const jumpDuration = now - this.jumpStartTime;
+            if (jumpDuration > 150 && jumpDuration < 1500) {
+                if (window.gameManager && window.gameManager.state === 'playing') {
+                    window.gameManager.onJumpDetected({ duration: jumpDuration, fromPose: true });
+                }
+                
+                // アバターもジャンプ
+                this.animateAvatarJump();
+                
+                Utils.log("ポーズでジャンプ検出！", jumpDuration + "ms");
+            }
+        }
+        
+        this.lastFootY = avgFootY;
+    }
+    
     updateAvatarFromPose(detail) {
         if (!this.playerAvatar) return;
         
         // メディアパイプ接続時はデモモード解除
         if (detail.keypoints && !detail.fallback) {
             this.demoMode = false;
+            if (renderManager) {
+                updateModeIndicator(false);
+            }
         }
         
         // 簡易フォールバック：ジャンプアニメーションのみ
