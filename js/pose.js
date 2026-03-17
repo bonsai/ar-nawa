@@ -23,6 +23,9 @@ class PoseManager {
     async init() {
         Utils.log("姿勢推定初期化中...");
         
+        // カメラ映像表示用のビデオ要素取得
+        const cameraFeed = document.getElementById('camera-feed');
+        
         // カメラ映像取得
         try {
             this.video = document.createElement('video');
@@ -40,6 +43,13 @@ class PoseManager {
             });
             this.video.srcObject = stream;
             await this.video.play();
+            
+            // デバッグ表示用にも接続
+            if (cameraFeed) {
+                cameraFeed.srcObject = stream;
+                cameraFeed.classList.remove('hidden');
+                Utils.log("カメラ映像表示有効");
+            }
             
             Utils.log("カメラ起動完了");
         } catch (e) {

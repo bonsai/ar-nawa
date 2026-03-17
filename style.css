@@ -79,6 +79,25 @@ body {
     pointer-events: none;
 }
 
+/* カメラ映像表示（デバッグ用） */
+#camera-feed {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 160px;
+    height: 120px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    z-index: 20;
+    transform: scaleX(-1); /* 鏡像 */
+    object-fit: cover;
+}
+
+#camera-feed.hidden {
+    display: none;
+}
+
 /* スタート前のオーバーレイ */
 #start-overlay {
     position: fixed;
