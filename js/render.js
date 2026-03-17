@@ -41,6 +41,9 @@ class RenderManager {
         this.lastFootY = undefined;
         this.jumpState = 'ground';
         this.jumpStartTime = 0;
+        
+        // アバター同期用
+        this.baseHipY = undefined;
     }
     
     init() {
@@ -693,12 +696,12 @@ class RenderManager {
     }
     
     updateAvatarFromPose(detail) {
-        if (!this.playerAvatar) return;
+        if (!this.playerAvatar || !detail.keypoints) return;
         
         // メディアパイプ接続時はデモモード解除
         if (detail.keypoints && !detail.fallback) {
             this.demoMode = false;
-            if (renderManager) {
+            if (typeof updateModeIndicator === 'function') {
                 updateModeIndicator(false);
             }
         }
@@ -707,6 +710,92 @@ class RenderManager {
         if (detail.fallback) {
             this.animateAvatarJump();
             return;
+        }
+        
+        // キーポイントからアバターを動かす
+        this.syncAvatarToPose(detail.keypoints);
+    }
+    
+    syncAvatarToPose(keypoints) {
+        if (!this.playerAvatar || !this.leftArm || !this.rightArm) return;
+        
+        // 主要キーポイント取得（MediaPipe 索引）
+        const leftShoulder = keypoints[11];
+        const rightShoulder = keypoints[12];
+        const leftElbow = keypoints[13];
+        const rightElbow = keypoints[14];
+        const leftWrist = keypoints[15];
+        const rightWrist = keypoints[16];
+        const leftHip = keypoints[23];
+        const rightHip = keypoints[24];
+        const nose = keypoints[0];
+        
+        // 有効なポーズかチェック
+        const isValid = (kp) => kp && kp.visibility > 0.3;
+        
+        // 腕の角度計算
+        if (isValid(leftShoulder) && isValid(leftElbow)) {
+            // 左腕：肘の位置から角度を計算
+            const dx = leftElbow.x - leftShoulder.x;
+            const dy = leftElbow.y - leftShoulder.y;
+            const angle = Math.atan2(dy, dx);
+            
+            // アバターの左腕を回転
+            this.leftArm.rotation.z = angle + 0.5;
+            this.leftArm.rotation.x = isValid(leftWrist) ? (leftWrist.z - leftElbow.z) * 2 : 0;
+        }
+        
+        if (isValid(rightShoulder) && isValid(rightElbow)) {
+            // 右腕：肘の位置から角度を計算
+            const dx = rightElbow.x - rightShoulder.x;
+            const dy = rightElbow.y - rightShoulder.y;
+            const angle = Math.atan2(dy, dx);
+            
+            // アバターの右腕を回転
+            this.rightArm.rotation.z = -angle - 0.5;
+            this.rightArm.rotation.x = isValid(rightWrist) ? -(rightWrist.z - rightElbow.z) * 2 : 0;
+        }
+        
+        // 体の傾き（肩の高低差から）
+        if (isValid(leftShoulder) && isValid(rightShoulder)) {
+            const shoulderDiff = leftShoulder.y - rightShoulder.y;
+            this.playerAvatar.mesh.rotation.z = shoulderDiff * 0.5;
+        }
+        
+        // 前後傾（肘の Z 位置から）
+        if (isValid(leftElbow) && isValid(rightElbow)) {
+            const avgElbowZ = (leftElbow.z + rightElbow.z) / 2;
+            this.playerAvatar.mesh.rotation.x = avgElbowZ * 0.3;
+        }
+        
+        // 頭の向き（鼻の位置から）
+        if (isValid(nose)) {
+            const headTurn = (nose.x - 0.5) * 2;
+            const head = this.playerAvatar.mesh.getObjectByName('head');
+            if (head) {
+                head.rotation.y = headTurn;
+            }
+        }
+        
+        // ジャンプ状態（足首から）
+        if (isValid(leftHip) && isValid(rightHip)) {
+            const avgHipY = (leftHip.y + rightHip.y) / 2;
+            
+            // 基準位置
+            if (this.baseHipY === undefined) {
+                this.baseHipY = avgHipY;
+            }
+            this.baseHipY = this.baseHipY * 0.9 + avgHipY * 0.1;
+            
+            // ジャンプ検出
+            const displacement = this.baseHipY - avgHipY;
+            if (displacement > 0.1 && !this.avatarData.isJumping) {
+                this.avatarData.isJumping = true;
+                this.playerAvatar.mesh.position.y = displacement * 2;
+            } else if (displacement < 0.02 && this.avatarData.isJumping) {
+                this.avatarData.isJumping = false;
+                this.playerAvatar.mesh.position.y = 0;
+            }
         }
     }
     
@@ -1068,18 +1157,28 @@ class RenderManager {
         // キーボード/ボタン操作によるアバター移動
         this.updateAvatarMovement();
         
-        // プレイヤーアバターのアニメーション（メディアパイプ接続時）
+        // プレイヤーアバターのアニメーション
         const time = Date.now() * 0.001;
-        if (this.playerAvatar && !this.demoMode && !this.avatarData.isJumping) {
-            // 待機アニメーション：呼吸
-            this.playerAvatar.mesh.position.y = Math.sin(time * 2) * 0.02;
-            
-            // 腕の軽い動き
-            if (this.leftArm && !this.keys.left) {
-                this.leftArm.rotation.x = Math.sin(time) * 0.1;
+        
+        if (this.playerAvatar && !this.demoMode) {
+            // ポーズ同期モード：呼吸のみ（同期は syncAvatarToPose で処理）
+            if (!this.avatarData.isJumping) {
+                // 軽い呼吸アニメーション
+                const breath = Math.sin(time * 2) * 0.01;
+                this.playerAvatar.mesh.position.y += breath;
             }
-            if (this.rightArm && !this.keys.right) {
-                this.rightArm.rotation.x = Math.sin(time + Math.PI) * 0.1;
+            
+            // 腕の軽い動き（ポーズ検出がない場合のみ）
+            if (!this.keys.left && this.leftArm) {
+                this.leftArm.rotation.x = Math.sin(time) * 0.05;
+            }
+            if (!this.keys.right && this.rightArm) {
+                this.rightArm.rotation.x = Math.sin(time + Math.PI) * 0.05;
+            }
+        } else if (this.playerAvatar && this.demoMode) {
+            // デモモード：待機アニメーション
+            if (!this.avatarData.isJumping) {
+                this.playerAvatar.mesh.position.y = Math.sin(time * 2) * 0.02;
             }
         }
         
