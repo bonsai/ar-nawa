@@ -5,11 +5,20 @@ class RenderManager {
         this.camera = null;
         this.renderer = null;
         this.robots = [];
+        this.playerAvatar = null;
         this.rope = null;
         this.floorMarker = null;
         this.shadowRing = null;
         this.effects = [];
         this.isInitialized = false;
+        
+        // アバター用データ
+        this.avatarData = {
+            leftArmAngle: 0,
+            rightArmAngle: 0,
+            bodyLean: 0,
+            isJumping: false
+        };
     }
     
     init() {
@@ -17,6 +26,7 @@ class RenderManager {
         
         this.createScene();
         this.createRobots();
+        this.createPlayerAvatar();
         this.createRope();
         this.createFloorMarker();
         this.setupEventListeners();
@@ -179,6 +189,91 @@ class RenderManager {
         Utils.log("ロボット作成完了：" + this.robots.length + "体");
     }
     
+    createPlayerAvatar() {
+        // プレイヤー用アバター（シンプルな人型）
+        const group = new THREE.Group();
+        
+        // 体
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.9, 0.35),
+            new THREE.MeshStandardMaterial({ 
+                color: 0x00aaff,
+                emissive: 0x003355,
+                roughness: 0.5,
+                metalness: 0.7
+            })
+        );
+        body.position.y = 0.45;
+        body.name = 'body';
+        group.add(body);
+        
+        // 頭
+        const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.3, 16, 16),
+            new THREE.MeshStandardMaterial({ 
+                color: 0xffccaa,
+                roughness: 0.8
+            })
+        );
+        head.position.y = 1.1;
+        head.name = 'head';
+        group.add(head);
+        
+        // 目
+        const eyeGeom = new THREE.SphereGeometry(0.06, 8, 8);
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+        
+        const leftEye = new THREE.Mesh(eyeGeom, eyeMat);
+        leftEye.position.set(-0.1, 1.15, 0.25);
+        leftEye.name = 'eye';
+        group.add(leftEye);
+        
+        const rightEye = new THREE.Mesh(eyeGeom, eyeMat);
+        rightEye.position.set(0.1, 1.15, 0.25);
+        rightEye.name = 'eye';
+        group.add(rightEye);
+        
+        // 腕（可動）
+        const armGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8);
+        const armMat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
+        
+        this.leftArm = new THREE.Mesh(armGeom, armMat);
+        this.leftArm.position.set(-0.35, 0.7, 0);
+        this.leftArm.rotation.z = 0.3;
+        this.leftArm.name = 'leftArm';
+        group.add(this.leftArm);
+        
+        this.rightArm = new THREE.Mesh(armGeom, armMat);
+        this.rightArm.position.set(0.35, 0.7, 0);
+        this.rightArm.rotation.z = -0.3;
+        this.rightArm.name = 'rightArm';
+        group.add(this.rightArm);
+        
+        // 足
+        const legGeom = new THREE.CylinderGeometry(0.07, 0.07, 0.45, 8);
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        
+        const leftLeg = new THREE.Mesh(legGeom, legMat);
+        leftLeg.position.set(-0.12, -0.22, 0);
+        group.add(leftLeg);
+        
+        const rightLeg = new THREE.Mesh(legGeom, legMat);
+        rightLeg.position.set(0.12, -0.22, 0);
+        group.add(rightLeg);
+        
+        // プレイヤー位置
+        group.position.set(0, 0, 0);
+        
+        this.playerAvatar = {
+            mesh: group,
+            baseY: 0,
+            isJumping: false
+        };
+        
+        this.scene.add(group);
+        Utils.log("プレイヤーアバター作成完了");
+    }
+    
     createRope() {
         // パーティクルで光の縄を表現
         const particleCount = 30;
@@ -263,6 +358,18 @@ class RenderManager {
             this.updateRope(e.detail.angle);
         });
         
+        window.addEventListener('poseUpdate', (e) => {
+            this.updateAvatarFromPose(e.detail);
+        });
+        
+        window.addEventListener('avatarUpdate', (e) => {
+            this.updateAvatarFromData(e.detail);
+        });
+        
+        window.addEventListener('jumpComplete', (e) => {
+            this.animateAvatarJump();
+        });
+        
         window.addEventListener('successJump', (e) => {
             this.showSuccessEffect(e.detail);
             this.setRobotEmotion('happy');
@@ -314,6 +421,62 @@ class RenderManager {
         }
         
         Utils.log("ロボット配置完了");
+    }
+    
+    updateAvatarFromPose(detail) {
+        if (!this.playerAvatar || !detail.keypoints) return;
+        
+        // 簡易フォールバック：ジャンプアニメーションのみ
+        if (detail.fallback) {
+            this.animateAvatarJump();
+            return;
+        }
+    }
+    
+    updateAvatarFromData(data) {
+        if (!this.playerAvatar) return;
+        
+        // 腕の角度を更新
+        if (this.leftArm && data.leftArmAngle !== undefined) {
+            this.leftArm.rotation.z = data.leftArmAngle + 0.5;
+        }
+        if (this.rightArm && data.rightArmAngle !== undefined) {
+            this.rightArm.rotation.z = -data.rightArmAngle - 0.5;
+        }
+        
+        // 体の傾き
+        if (data.bodyLean !== undefined) {
+            this.playerAvatar.mesh.rotation.z = data.bodyLean * 0.3;
+        }
+        
+        // ジャンプ状態
+        this.avatarData.isJumping = data.isJumping;
+    }
+    
+    animateAvatarJump() {
+        if (!this.playerAvatar) return;
+        
+        const startY = this.playerAvatar.baseY;
+        const jumpHeight = 0.5;
+        const duration = 300;
+        const startTime = Date.now();
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 放物線ジャンプ
+            const jumpY = Math.sin(progress * Math.PI) * jumpHeight;
+            this.playerAvatar.mesh.position.y = startY + jumpY;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.playerAvatar.mesh.position.y = startY;
+            }
+        };
+        
+        animate();
     }
     
     updateRope(angle) {
@@ -551,8 +714,22 @@ class RenderManager {
         
         this.updateEffects();
         
-        // ロボットのアニメーション（待機中も少し動かす）
+        // プレイヤーアバターのアニメーション
         const time = Date.now() * 0.001;
+        if (this.playerAvatar && !this.avatarData.isJumping) {
+            // 待機アニメーション：呼吸
+            this.playerAvatar.mesh.position.y = Math.sin(time * 2) * 0.02;
+            
+            // 腕の軽い動き
+            if (this.leftArm) {
+                this.leftArm.rotation.x = Math.sin(time) * 0.1;
+            }
+            if (this.rightArm) {
+                this.rightArm.rotation.x = Math.sin(time + Math.PI) * 0.1;
+            }
+        }
+        
+        // ロボットのアニメーション（待機中も少し動かす）
         this.robots.forEach((robot, i) => {
             if (robot.emotion === 'neutral') {
                 // 待機アニメーション：ゆっくり首を振る
