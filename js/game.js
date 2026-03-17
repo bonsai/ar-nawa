@@ -31,6 +31,16 @@ class GameManager {
     }
     
     setupEventListeners() {
+        // スタートボタン
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.addEventListener('click', () => this.startGame());
+            btnStart.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.startGame();
+            });
+        }
+        
         // 床検出
         window.addEventListener('floorDetected', (e) => {
             this.onFloorDetected(e.detail.plane);
@@ -56,8 +66,15 @@ class GameManager {
         // 床の位置を設定
         this.floorPosition = plane || { x: 0, y: 0, z: 0 };
         
-        document.getElementById('message').textContent = '手を振ってスタート！';
+        document.getElementById('message').textContent = 'スタートボタンを押してね';
         this.state = 'idle';
+        
+        // スタートボタン表示
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.classList.remove('hidden', 'playing');
+            btnStart.textContent = '▶️ スタート';
+        }
         
         // イベント発火（描画用）
         window.dispatchEvent(new CustomEvent('gameReady', {
@@ -66,7 +83,12 @@ class GameManager {
     }
     
     startGame() {
-        if (this.state !== 'idle' && this.state !== 'gameover') return;
+        if (this.state === 'playing') return; // 既にプレイ中は無視
+        
+        // ゲームオーバー状態からは即時リスタート
+        if (this.state === 'gameover') {
+            this.reset();
+        }
         
         this.state = 'countdown';
         this.score = 0;
@@ -77,6 +99,12 @@ class GameManager {
         this.ropeSpeed = 0.08;
         
         this.updateUI();
+        
+        // スタートボタンを非表示
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.classList.add('hidden');
+        }
         
         // カウントダウン
         let count = 3;
@@ -196,33 +224,7 @@ class GameManager {
     onPoseUpdate(keypoints) {
         if (!keypoints) return;
         
-        // 手を振るジェスチャー検出（スタート用）
-        if (this.state === 'idle' || this.state === 'gameover') {
-            this.detectWaveGesture(keypoints);
-        }
-    }
-    
-    detectWaveGesture(keypoints) {
-        const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-        const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-        const nose = keypoints.find(k => k.name === 'nose');
-        
-        if (!leftWrist || !rightWrist || !nose) return;
-        
-        // 簡易版：両手が頭上より高い（画像座標では Y が小さい）
-        const handsUpThreshold = nose.y * 0.7;
-        const handsUp = leftWrist.y < handsUpThreshold && 
-                        rightWrist.y < handsUpThreshold;
-        
-        if (handsUp && !this.gameStarted) {
-            // 0.5 秒間隔でしかスタートできない
-            const now = Date.now();
-            if (!this.lastStartAttempt || now - this.lastStartAttempt > 500) {
-                this.lastStartAttempt = now;
-                Utils.log("スタートジェスチャー検出！");
-                this.startGame();
-            }
-        }
+        // 手を振るジェスチャーは不要（ボタンでスタート）
     }
     
     onFail() {
@@ -252,6 +254,14 @@ class GameManager {
         messageEl.textContent = `ゲームオーバー！スコア：${this.score}`;
         messageEl.style.background = 'rgba(255,100,0,0.8)';
         
+        // スタートボタンを再表示
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.classList.remove('hidden');
+            btnStart.textContent = '🔄 リトライ';
+            btnStart.classList.add('playing');
+        }
+        
         // ゲームオーバーイベント
         window.dispatchEvent(new CustomEvent('gameOver', {
             detail: { score: this.score, maxCombo: this.maxCombo }
@@ -260,12 +270,18 @@ class GameManager {
         // 3 秒後にリセット
         setTimeout(() => {
             this.state = 'idle';
-            messageEl.textContent = '手を振って再スタート';
+            messageEl.textContent = 'スタートボタンを押してね';
             messageEl.style.background = 'rgba(0,0,0,0.7)';
             this.failCount = 0;
             this.gameStarted = false;
             this.invincibleTime = 0;
             this.updateUI();
+            
+            // ボタンを元に戻す
+            if (btnStart) {
+                btnStart.textContent = '▶️ スタート';
+                btnStart.classList.remove('playing');
+            }
         }, 3000);
     }
     
@@ -286,8 +302,16 @@ class GameManager {
         this.ropeAngle = 0;
         this.failCount = 0;
         this.invincibleTime = 0;
+        
+        // スタートボタンを元に戻す
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) {
+            btnStart.textContent = '▶️ スタート';
+            btnStart.classList.remove('hidden', 'playing');
+        }
+        
         this.updateUI();
-        document.getElementById('message').textContent = '手を振ってスタート';
+        document.getElementById('message').textContent = 'スタートボタンを押してね';
     }
 }
 
