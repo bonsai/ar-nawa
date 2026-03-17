@@ -17,12 +17,20 @@ class RenderManager {
             leftArmAngle: 0,
             rightArmAngle: 0,
             bodyLean: 0,
-            isJumping: false
+            isJumping: false,
+            positionX: 0
         };
         
         // デモモード（メディアパイプ未接続時）
         this.demoMode = true;
         this.demoTime = 0;
+        
+        // キーボード入力状態
+        this.keys = {
+            left: false,
+            right: false,
+            up: false
+        };
     }
     
     init() {
@@ -34,6 +42,7 @@ class RenderManager {
         this.createRope();
         this.createFloorMarker();
         this.setupEventListeners();
+        this.setupControls();
         
         this.isInitialized = true;
         Utils.log("レンダリング初期化完了");
@@ -84,9 +93,9 @@ class RenderManager {
         // シンプルなロボット（立方体の組み合わせ）
         const robotColors = [0xff3333, 0x33ff33, 0x3333ff];
         const positions = [
-            { x: -1.5, z: 0 },
-            { x: 1.5, z: 0 },
-            { x: 0, z: -1.5 }
+            { x: -2.5, z: -1 },  // 左ロボット（後ろ）
+            { x: 2.5, z: -1 },   // 右ロボット（後ろ）
+            { x: 0, z: -3 }      // 奥リーダー（十分後ろ）
         ];
         
         for (let i = 0; i < 3; i++) {
@@ -265,8 +274,8 @@ class RenderManager {
         rightLeg.position.set(0.12, -0.22, 0);
         group.add(rightLeg);
         
-        // プレイヤー位置
-        group.position.set(0, 0, 0);
+        // プレイヤー位置（手前中央）
+        group.position.set(0, 0, 1.5);  // アバターは手前に
         
         this.playerAvatar = {
             mesh: group,
@@ -351,6 +360,86 @@ class RenderManager {
         this.scene.add(gridHelper);
         
         Utils.log("床マーカー作成完了");
+    }
+    
+    setupControls() {
+        // キーボード操作
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                this.keys.left = true;
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                this.keys.right = true;
+            }
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+                if (!this.keys.up) {
+                    this.keys.up = true;
+                    this.handleJump();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                this.keys.left = false;
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                this.keys.right = false;
+            }
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+                this.keys.up = false;
+            }
+        });
+        
+        // ボタン操作
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnJump = document.getElementById('btn-jump');
+        
+        // タッチ/マウスイベント
+        const addTouchListener = (elem, direction) => {
+            elem.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.keys[direction] = true;
+                if (direction === 'up') this.handleJump();
+            });
+            elem.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.keys[direction] = false;
+            });
+            elem.addEventListener('mousedown', () => {
+                this.keys[direction] = true;
+                if (direction === 'up') this.handleJump();
+            });
+            elem.addEventListener('mouseup', () => {
+                this.keys[direction] = false;
+            });
+            elem.addEventListener('mouseleave', () => {
+                this.keys[direction] = false;
+            });
+        };
+        
+        addTouchListener(btnLeft, 'left');
+        addTouchListener(btnRight, 'right');
+        addTouchListener(btnJump, 'up');
+        
+        Utils.log("コントロール設定完了");
+    }
+    
+    handleJump() {
+        if (!this.playerAvatar) return;
+        
+        // ジャンプ実行
+        this.animateAvatarJump();
+        
+        // ゲームにも通知
+        if (window.gameManager && window.gameManager.state === 'playing') {
+            window.gameManager.onJumpDetected({ duration: 300 });
+        }
+        
+        // デモモード解除
+        this.demoMode = false;
+        updateModeIndicator(false);
     }
     
     setupEventListeners() {
@@ -497,6 +586,40 @@ class RenderManager {
         // 体の傾き（リズムに合わせて）
         this.playerAvatar.mesh.rotation.z = Math.sin(this.demoTime) * 0.05;
         this.playerAvatar.mesh.rotation.x = Math.sin(this.demoTime * 2) * 0.03;
+    }
+    
+    updateAvatarMovement() {
+        if (!this.playerAvatar || this.demoMode) return;
+        
+        // 左右移動
+        const moveSpeed = 0.08;
+        const boundary = 2.0;
+        
+        if (this.keys.left) {
+            this.avatarData.positionX -= moveSpeed;
+            // 左に移動時は左腕を前に
+            if (this.leftArm) this.leftArm.rotation.z = 1.0;
+        }
+        if (this.keys.right) {
+            this.avatarData.positionX += moveSpeed;
+            // 右に移動時は右腕を前に
+            if (this.rightArm) this.rightArm.rotation.z = -1.0;
+        }
+        
+        // 位置制限
+        this.avatarData.positionX = Math.max(-boundary, Math.min(boundary, this.avatarData.positionX));
+        
+        // アバター位置に反映（滑らかに）
+        this.playerAvatar.mesh.position.x += (this.avatarData.positionX - this.playerAvatar.mesh.position.x) * 0.2;
+        
+        // 移動方向を向く
+        if (this.keys.left) {
+            this.playerAvatar.mesh.rotation.y = 0.3;
+        } else if (this.keys.right) {
+            this.playerAvatar.mesh.rotation.y = -0.3;
+        } else {
+            this.playerAvatar.mesh.rotation.y = 0;
+        }
     }
     
     animateAvatarJump() {
@@ -763,6 +886,9 @@ class RenderManager {
         // デモモードアニメーション
         this.updateDemoAnimation();
         
+        // キーボード/ボタン操作によるアバター移動
+        this.updateAvatarMovement();
+        
         // プレイヤーアバターのアニメーション（メディアパイプ接続時）
         const time = Date.now() * 0.001;
         if (this.playerAvatar && !this.demoMode && !this.avatarData.isJumping) {
@@ -770,10 +896,10 @@ class RenderManager {
             this.playerAvatar.mesh.position.y = Math.sin(time * 2) * 0.02;
             
             // 腕の軽い動き
-            if (this.leftArm) {
+            if (this.leftArm && !this.keys.left) {
                 this.leftArm.rotation.x = Math.sin(time) * 0.1;
             }
-            if (this.rightArm) {
+            if (this.rightArm && !this.keys.right) {
                 this.rightArm.rotation.x = Math.sin(time + Math.PI) * 0.1;
             }
         }
