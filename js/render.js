@@ -757,55 +757,83 @@ class RenderManager {
         const leftHip = keypoints[23];
         const rightHip = keypoints[24];
         const nose = keypoints[0];
+        const leftEye = keypoints[1];
+        const rightEye = keypoints[2];
         
         // 有効なポーズかチェック
         const isValid = (kp) => kp && kp.visibility > 0.3;
         
-        // 腕の角度計算
-        if (isValid(leftShoulder) && isValid(leftElbow)) {
-            // 左腕：肘の位置から角度を計算
-            const dx = leftElbow.x - leftShoulder.x;
-            const dy = leftElbow.y - leftShoulder.y;
+        // 腕の角度計算（肘から手首まで）
+        if (isValid(leftShoulder) && isValid(leftWrist)) {
+            // 左腕：手首の位置から角度を計算
+            const dx = leftWrist.x - leftShoulder.x;
+            const dy = leftWrist.y - leftShoulder.y;
             const angle = Math.atan2(dy, dx);
             
-            // アバターの左腕を回転
-            this.leftArm.rotation.z = angle + 0.5;
-            this.leftArm.rotation.x = isValid(leftWrist) ? (leftWrist.z - leftElbow.z) * 2 : 0;
+            // アバターの左腕を回転（滑らかに）
+            const targetAngle = angle + 0.5;
+            this.leftArm.rotation.z += (targetAngle - this.leftArm.rotation.z) * 0.3;
+            
+            // 前後移動（Z 軸）
+            if (isValid(leftElbow)) {
+                this.leftArm.rotation.x += ((leftElbow.z - leftShoulder.z) * 2 - this.leftArm.rotation.x) * 0.3;
+            }
         }
         
-        if (isValid(rightShoulder) && isValid(rightElbow)) {
-            // 右腕：肘の位置から角度を計算
-            const dx = rightElbow.x - rightShoulder.x;
-            const dy = rightElbow.y - rightShoulder.y;
+        if (isValid(rightShoulder) && isValid(rightWrist)) {
+            // 右腕：手首の位置から角度を計算
+            const dx = rightWrist.x - rightShoulder.x;
+            const dy = rightWrist.y - rightShoulder.y;
             const angle = Math.atan2(dy, dx);
             
-            // アバターの右腕を回転
-            this.rightArm.rotation.z = -angle - 0.5;
-            this.rightArm.rotation.x = isValid(rightWrist) ? -(rightWrist.z - rightElbow.z) * 2 : 0;
+            // アバターの右腕を回転（滑らかに）
+            const targetAngle = -angle - 0.5;
+            this.rightArm.rotation.z += (targetAngle - this.rightArm.rotation.z) * 0.3;
+            
+            // 前後移動（Z 軸）
+            if (isValid(rightElbow)) {
+                this.rightArm.rotation.x += (-(rightElbow.z - rightShoulder.z) * 2 - this.rightArm.rotation.x) * 0.3;
+            }
         }
         
         // 体の傾き（肩の高低差から）
         if (isValid(leftShoulder) && isValid(rightShoulder)) {
             const shoulderDiff = leftShoulder.y - rightShoulder.y;
-            this.playerAvatar.mesh.rotation.z = shoulderDiff * 0.5;
+            this.playerAvatar.mesh.rotation.z += (shoulderDiff * 0.5 - this.playerAvatar.mesh.rotation.z) * 0.2;
         }
         
-        // 前後傾（肘の Z 位置から）
-        if (isValid(leftElbow) && isValid(rightElbow)) {
-            const avgElbowZ = (leftElbow.z + rightElbow.z) / 2;
-            this.playerAvatar.mesh.rotation.x = avgElbowZ * 0.3;
+        // 前後傾（腰の位置から）
+        if (isValid(leftHip) && isValid(rightHip)) {
+            const avgHipZ = (leftHip.z + rightHip.z) / 2;
+            this.playerAvatar.mesh.rotation.x += (avgHipZ * 0.3 - this.playerAvatar.mesh.rotation.x) * 0.2;
         }
         
-        // 頭の向き（鼻の位置から）
+        // 頭の向き（鼻と目の位置から）
         if (isValid(nose)) {
-            const headTurn = (nose.x - 0.5) * 2;
+            const headTurn = (nose.x - 0.5) * 3;
+            const headTilt = (nose.y - 0.5) * 2;
+            
             const head = this.playerAvatar.mesh.getObjectByName('head');
             if (head) {
-                head.rotation.y = headTurn;
+                head.rotation.y += (headTurn - head.rotation.y) * 0.2;
+                head.rotation.x += (headTilt - head.rotation.x) * 0.2;
             }
         }
         
-        // ジャンプ状態（足首から）
+        // 左右移動（肩の中心 X 位置から）
+        if (isValid(leftShoulder) && isValid(rightShoulder)) {
+            const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+            const targetX = (shoulderCenterX - 0.5) * 4; // -2 〜 2 の範囲
+            
+            // アバターの X 位置を滑らかに移動
+            this.avatarData.positionX += (targetX - this.avatarData.positionX) * 0.1;
+            this.avatarData.positionX = Math.max(-2.0, Math.min(2.0, this.avatarData.positionX));
+            
+            // アバター位置に反映
+            this.playerAvatar.mesh.position.x += (this.avatarData.positionX - this.playerAvatar.mesh.position.x) * 0.2;
+        }
+        
+        // ジャンプ状態（腰の Y 位置から）
         if (isValid(leftHip) && isValid(rightHip)) {
             const avgHipY = (leftHip.y + rightHip.y) / 2;
             
@@ -819,7 +847,7 @@ class RenderManager {
             const displacement = this.baseHipY - avgHipY;
             if (displacement > 0.1 && !this.avatarData.isJumping) {
                 this.avatarData.isJumping = true;
-                this.playerAvatar.mesh.position.y = displacement * 2;
+                this.playerAvatar.mesh.position.y = displacement * 3;
             } else if (displacement < 0.02 && this.avatarData.isJumping) {
                 this.avatarData.isJumping = false;
                 this.playerAvatar.mesh.position.y = 0;
@@ -947,7 +975,7 @@ class RenderManager {
     updateRope(angle) {
         if (!this.rope || this.robots.length < 2) return;
         
-        // ロボット間の縄をパーティクルで表現
+        // ロボット間の縄をパーティクルで表現（横方向に伸びる）
         const leftRobot = this.robots[0].mesh.position;
         const rightRobot = this.robots[1].mesh.position;
         
@@ -956,8 +984,8 @@ class RenderManager {
         const normalizedAngle = angle % (Math.PI * 2);
         
         // 縄のベース高さ（中央付近）
-        const baseHeight = 0.5;
-        const amplitude = 1.2; // 上下振幅
+        const baseHeight = 0.3;
+        const amplitude = 1.0; // 上下振幅
         
         // 縄の形状：放物線 + 上下移動
         // 縄が「下」に来る時：プレイヤーがジャンプするタイミング
@@ -989,11 +1017,12 @@ class RenderManager {
             const z = leftRobot.z + (rightRobot.z - leftRobot.z) * t;
             
             // 縄の上下移動
-            // 中央が一番下（または上）になる放物線
+            // 中央が一番下になる放物線
             const parabola = Math.sin(t * Math.PI) * amplitude;
             
             // 全体の高さ：ベース + 放物線 - 回転による上下
-            const ropeY = baseHeight + parabola - (ropePhase * amplitude * 0.8);
+            // ropePhase が +1 の時が最も下（危険）
+            const ropeY = baseHeight + parabola - (ropePhase * amplitude * 0.7);
             
             positions[i*3] = x;
             positions[i*3+1] = ropeY;
