@@ -110,6 +110,12 @@ class PoseManager {
         this.keypoints = results.poseLandmarks;
         this.analyzePose();
         
+        // デモモード解除＆インジケータ更新
+        if (renderManager) {
+            renderManager.demoMode = false;
+            updateModeIndicator(false);
+        }
+        
         // イベント発火
         window.dispatchEvent(new CustomEvent('poseUpdate', {
             detail: { keypoints: this.keypoints }
@@ -132,6 +138,9 @@ class PoseManager {
     
     setupFallbackDetection() {
         Utils.log("フォールバック：簡易モーション検出モード");
+        
+        // デモモード継続
+        updateModeIndicator(true);
         
         // 定期的にジャンプイベントを発生（デモ用）
         setInterval(() => {
@@ -302,3 +311,17 @@ class PoseManager {
 // グローバルインスタンス
 const poseManager = new PoseManager();
 window.poseManager = poseManager;
+
+// モードインジケータ更新関数
+function updateModeIndicator(isDemo) {
+    const indicator = document.getElementById('mode-indicator');
+    if (indicator) {
+        if (isDemo) {
+            indicator.textContent = '🎭 デモモード';
+            indicator.className = '';
+        } else {
+            indicator.textContent = '📷 カメラ接続中';
+            indicator.className = 'connected';
+        }
+    }
+}

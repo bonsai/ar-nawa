@@ -19,6 +19,10 @@ class RenderManager {
             bodyLean: 0,
             isJumping: false
         };
+        
+        // デモモード（メディアパイプ未接続時）
+        this.demoMode = true;
+        this.demoTime = 0;
     }
     
     init() {
@@ -424,7 +428,12 @@ class RenderManager {
     }
     
     updateAvatarFromPose(detail) {
-        if (!this.playerAvatar || !detail.keypoints) return;
+        if (!this.playerAvatar) return;
+        
+        // メディアパイプ接続時はデモモード解除
+        if (detail.keypoints && !detail.fallback) {
+            this.demoMode = false;
+        }
         
         // 簡易フォールバック：ジャンプアニメーションのみ
         if (detail.fallback) {
@@ -435,6 +444,9 @@ class RenderManager {
     
     updateAvatarFromData(data) {
         if (!this.playerAvatar) return;
+        
+        // メディアパイプからデータがあればそれを使用
+        this.demoMode = false;
         
         // 腕の角度を更新
         if (this.leftArm && data.leftArmAngle !== undefined) {
@@ -451,6 +463,40 @@ class RenderManager {
         
         // ジャンプ状態
         this.avatarData.isJumping = data.isJumping;
+    }
+    
+    updateDemoAnimation() {
+        if (!this.demoMode || !this.playerAvatar) return;
+        
+        // デモモード：自動でアニメーション
+        this.demoTime += 0.02;
+        
+        // 腕を大きく振る（縄跳びの動作）
+        const armSwing = Math.sin(this.demoTime * 2) * 1.5;
+        
+        if (this.leftArm) {
+            this.leftArm.rotation.z = 0.5 + armSwing * 0.5;
+            this.leftArm.rotation.x = Math.sin(this.demoTime * 3) * 0.2;
+        }
+        if (this.rightArm) {
+            this.rightArm.rotation.z = -0.5 - armSwing * 0.5;
+            this.rightArm.rotation.x = Math.sin(this.demoTime * 3 + Math.PI) * 0.2;
+        }
+        
+        // 軽いジャンプ（縄のタイミングに合わせる）
+        const ropePhase = gameManager ? gameManager.ropeAngle : this.demoTime;
+        if (Math.sin(ropePhase) < -0.7) {
+            // 縄が下の時：ジャンプ
+            const jumpY = Math.max(0, Math.sin(ropePhase + Math.PI / 2) + 0.7) * 0.5;
+            this.playerAvatar.mesh.position.y = jumpY;
+        } else {
+            // 待機：呼吸
+            this.playerAvatar.mesh.position.y = Math.sin(this.demoTime * 2) * 0.02;
+        }
+        
+        // 体の傾き（リズムに合わせて）
+        this.playerAvatar.mesh.rotation.z = Math.sin(this.demoTime) * 0.05;
+        this.playerAvatar.mesh.rotation.x = Math.sin(this.demoTime * 2) * 0.03;
     }
     
     animateAvatarJump() {
@@ -714,9 +760,12 @@ class RenderManager {
         
         this.updateEffects();
         
-        // プレイヤーアバターのアニメーション
+        // デモモードアニメーション
+        this.updateDemoAnimation();
+        
+        // プレイヤーアバターのアニメーション（メディアパイプ接続時）
         const time = Date.now() * 0.001;
-        if (this.playerAvatar && !this.avatarData.isJumping) {
+        if (this.playerAvatar && !this.demoMode && !this.avatarData.isJumping) {
             // 待機アニメーション：呼吸
             this.playerAvatar.mesh.position.y = Math.sin(time * 2) * 0.02;
             
