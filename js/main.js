@@ -46,6 +46,7 @@
             
             // ゲーム初期化
             App.game = gameManager;
+            App.game.init(); // ゲームマネージャー初期化
             
             // レンダリングマネージャー初期化
             renderManager.init();
@@ -58,7 +59,13 @@
             
             // 準備完了
             App.isLoaded = true;
-            showMessage("手を振ってスタート");
+            showMessage("スタートボタンを押してね");
+            
+            // スタートボタン表示
+            const btnStart = document.getElementById('btn-start');
+            if (btnStart) {
+                btnStart.classList.remove('hidden');
+            }
             
             // オーバーレイ非表示（3 秒後）
             setTimeout(() => {
@@ -160,6 +167,14 @@
         const messageEl = document.getElementById('message');
         if (messageEl) {
             messageEl.textContent = text;
+        }
+        
+        // エラー表示時はスタートボタン非表示
+        if (text.includes('エラー')) {
+            const btnStart = document.getElementById('btn-start');
+            if (btnStart) {
+                btnStart.classList.add('hidden');
+            }
         }
     }
     

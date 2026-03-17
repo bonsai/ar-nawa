@@ -26,17 +26,26 @@ class GameManager {
         this.isJumping = false;
         this.jumpStartTime = 0;
         this.invincibleTime = 0; // 無敵時間
-        
+    }
+    
+    init() {
         this.setupEventListeners();
+        Utils.log("ゲームマネージャー初期化完了");
     }
     
     setupEventListeners() {
         // スタートボタン
         const btnStart = document.getElementById('btn-start');
+        Utils.log("スタートボタン検索:", btnStart ? "見つかった" : "未発見");
+        
         if (btnStart) {
-            btnStart.addEventListener('click', () => this.startGame());
+            btnStart.addEventListener('click', () => {
+                Utils.log("スタートボタンクリック！");
+                this.startGame();
+            });
             btnStart.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                Utils.log("スタートボタンタッチ！");
                 this.startGame();
             });
         }
@@ -72,9 +81,12 @@ class GameManager {
         // スタートボタン表示
         const btnStart = document.getElementById('btn-start');
         if (btnStart) {
-            btnStart.classList.remove('hidden', 'playing');
+            btnStart.classList.remove('hidden');
             btnStart.textContent = '▶️ スタート';
+            btnStart.style.display = 'block';
         }
+        
+        Utils.log("床検出完了、スタートボタン表示");
         
         // イベント発火（描画用）
         window.dispatchEvent(new CustomEvent('gameReady', {
