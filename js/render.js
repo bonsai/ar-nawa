@@ -180,7 +180,7 @@ class RenderManager {
     }
     
     createRope() {
-        // パーティクルで縄を表現
+        // パーティクルで光の縄を表現
         const particleCount = 30;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -193,17 +193,21 @@ class RenderManager {
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         
+        // 光る縄マテリアル
         const material = new THREE.PointsMaterial({
-            color: 0xffaa00,
-            size: 0.08,
+            color: 0xff3366, // 赤い光
+            size: 0.12,
             transparent: true,
-            opacity: 0.9,
-            blending: THREE.AdditiveBlending
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending,
+            emissive: 0xff0044
         });
         
         this.rope = {
             points: new THREE.Points(geometry, material),
-            particles: particleCount
+            particles: particleCount,
+            baseColor: 0xff3366,
+            glowColor: 0xff0044
         };
         
         this.scene.add(this.rope.points);
@@ -270,6 +274,12 @@ class RenderManager {
             setTimeout(() => this.setRobotEmotion('neutral'), 1000);
         });
         
+        window.addEventListener('hitByRope', (e) => {
+            this.showHitEffect(e.detail);
+            this.setRobotEmotion('sad');
+            setTimeout(() => this.setRobotEmotion('neutral'), 1000);
+        });
+        
         window.addEventListener('gameOver', (e) => {
             this.showGameOverEffect(e.detail);
         });
@@ -316,6 +326,20 @@ class RenderManager {
         // 縄の高さを sin カーブで変化
         const ropeY = Math.sin(angle) * 0.8 + 0.6; // 0.6〜1.4 くらい
         
+        // 縄の色を位置で変化（下の時は赤く危険表示）
+        const isRopeLow = Math.sin(angle) < -0.5;
+        if (isRopeLow) {
+            // 危険ゾーン：赤く強く光る
+            this.rope.points.material.color.setHex(0xff0044);
+            this.rope.points.material.size = 0.15;
+            this.rope.points.material.opacity = 1.0;
+        } else {
+            // 通常：ピンクの光
+            this.rope.points.material.color.setHex(this.rope.baseColor);
+            this.rope.points.material.size = 0.12;
+            this.rope.points.material.opacity = 0.9;
+        }
+        
         // パーティクル位置更新
         const positions = this.rope.points.geometry.attributes.position.array;
         
@@ -338,10 +362,11 @@ class RenderManager {
         
         // 影リングの位置を追跡（縄が一番下の時だけ強調）
         if (this.shadowRing) {
-            if (Math.sin(angle) < -0.7) {
-                this.shadowRing.material.opacity = 0.6;
-                this.shadowRing.material.emissiveIntensity = 0.5;
-                this.shadowRing.scale.set(1.2, 1.2, 1.2);
+            if (isRopeLow) {
+                this.shadowRing.material.opacity = 0.8;
+                this.shadowRing.material.emissiveIntensity = 0.8;
+                this.shadowRing.material.color.setHex(0xff0000);
+                this.shadowRing.scale.set(1.3, 1.3, 1.3);
             } else {
                 this.shadowRing.material.opacity = 0.0;
                 this.shadowRing.material.emissiveIntensity = 0;
@@ -431,18 +456,58 @@ class RenderManager {
     }
     
     showFailEffect() {
-        // 縄を赤く
+        // 縄を一瞬赤く
         if (this.rope) {
             this.rope.points.material.color.setHex(0xff0000);
             setTimeout(() => {
                 if (this.rope) {
-                    this.rope.points.material.color.setHex(0xffaa00);
+                    this.rope.points.material.color.setHex(this.rope.baseColor);
                 }
             }, 200);
         }
         
         // 失敗テキスト
         this.showFloatingText("MISS!", 0, 1.5, 0, 0xff0000);
+    }
+    
+    showHitEffect(detail) {
+        // 被弾エフェクト：画面全体を赤く点滅
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,0,0,0.5);
+            z-index: 999;
+            pointer-events: none;
+        `;
+        document.body.appendChild(overlay);
+        
+        setTimeout(() => {
+            document.body.removeChild(overlay);
+        }, 200);
+        
+        // 縄を強く赤く光らせる
+        if (this.rope) {
+            this.rope.points.material.color.setHex(0xff0000);
+            this.rope.points.material.size = 0.2;
+            setTimeout(() => {
+                if (this.rope) {
+                    this.rope.points.material.color.setHex(this.rope.baseColor);
+                    this.rope.points.material.size = 0.12;
+                }
+            }, 300);
+        }
+        
+        // 被弾テキスト
+        this.showFloatingText("💥 HIT!", 0, 1.5, 0, 0xff0000);
+        
+        // ハートアイコン表示（残機）
+        const hearts = '❤️'.repeat(Math.max(0, this.maxFails - detail.failCount)) + 
+                       '💔'.repeat(detail.failCount);
+        this.showFloatingText(hearts, 0, 2.5, 0, 0xffffff);
     }
     
     showGameOverEffect(detail) {

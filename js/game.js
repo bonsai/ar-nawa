@@ -21,6 +21,12 @@ class GameManager {
         this.floorPosition = null;
         this.gameStarted = false;
         
+        // プレイヤー状態
+        this.playerState = 'ground'; // ground, jumping
+        this.isJumping = false;
+        this.jumpStartTime = 0;
+        this.invincibleTime = 0; // 無敵時間
+        
         this.setupEventListeners();
     }
     
@@ -115,12 +121,20 @@ class GameManager {
     onJumpDetected(jumpData) {
         if (this.state !== 'playing') return;
         
+        // ジャンプ状態に設定
+        this.isJumping = true;
+        this.jumpStartTime = Date.now();
+        this.playerState = 'jumping';
+        
         // 縄の現在位置をチェック
         const ropeY = Math.sin(this.ropeAngle); // -1〜1
         
+        // 縄が下の位置にある（危険ゾーン）
+        const isRopeLow = ropeY < -0.5;
+        
         // ジャンプタイミング判定
-        if (Math.abs(ropeY) < this.jumpWindow) {
-            // 成功！
+        if (isRopeLow && Math.abs(ropeY) < this.jumpWindow) {
+            // 成功！縄を避けられた
             const jumpScore = 100 * this.combo;
             this.score += jumpScore;
             this.combo++;
@@ -137,9 +151,45 @@ class GameManager {
             }));
             
             Utils.log(`ジャンプ成功！スコア：${jumpScore}, コンボ：${this.combo}`);
-        } else {
-            // 失敗
-            this.onFail();
+        } else if (isRopeLow && !jumpData.fallback) {
+            // 失敗：縄に当たった！
+            this.onHitByRope();
+        }
+        
+        // ジャンプ終了処理
+        setTimeout(() => {
+            this.isJumping = false;
+            this.playerState = 'ground';
+        }, 500);
+    }
+    
+    onHitByRope() {
+        // 縄に衝突！
+        Utils.log("縄に衝突！");
+        
+        // 無敵時間中はダメージなし
+        if (Date.now() < this.invincibleTime) {
+            return;
+        }
+        
+        this.combo = 1;
+        this.failCount++;
+        
+        this.updateUI();
+        
+        // 被弾エフェクト
+        window.dispatchEvent(new CustomEvent('hitByRope', {
+            detail: { failCount: this.failCount }
+        }));
+        
+        // 無敵時間を設定（1 秒）
+        this.invincibleTime = Date.now() + 1000;
+        
+        Utils.log(`被弾！失敗回数：${this.failCount}/${this.maxFails}`);
+        
+        // 3 回失敗でゲームオーバー
+        if (this.failCount >= this.maxFails) {
+            this.gameOver();
         }
     }
     
@@ -214,12 +264,19 @@ class GameManager {
             messageEl.style.background = 'rgba(0,0,0,0.7)';
             this.failCount = 0;
             this.gameStarted = false;
+            this.invincibleTime = 0;
+            this.updateUI();
         }, 3000);
     }
     
     updateUI() {
         document.getElementById('score').textContent = this.score;
         document.getElementById('combo').textContent = `x${this.combo}`;
+        
+        // 残機表示更新
+        const hearts = '❤️'.repeat(Math.max(0, this.maxFails - this.failCount)) + 
+                       '💔'.repeat(this.failCount);
+        document.getElementById('lives').textContent = hearts;
     }
     
     reset() {
@@ -228,6 +285,7 @@ class GameManager {
         this.combo = 1;
         this.ropeAngle = 0;
         this.failCount = 0;
+        this.invincibleTime = 0;
         this.updateUI();
         document.getElementById('message').textContent = '手を振ってスタート';
     }
