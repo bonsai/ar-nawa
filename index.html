@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Tobu! 🤖 ロボットと縄跳び</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- MediaPipe Pose Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+</head>
+<body>
+    <!-- スタートオーバーレイ -->
+    <div id="start-overlay">
+        <h1>AR Tobu! 🤖</h1>
+        <p>ロボットと縄跳びしよう！</p>
+        <div class="wave-icon">👋</div>
+        <p style="margin-top: 30px; font-size: 16px; opacity: 0.8;">
+            両手を頭上に挙げてスタート
+        </p>
+    </div>
+
+    <!-- UI 要素 -->
+    <div id="ui">
+        <div id="score">0</div>
+        <div id="combo">x1</div>
+        <div id="message">手を振ってスタート</div>
+    </div>
+    
+    <!-- キャンバス（Three.js が自動生成） -->
+    
+    <!-- デバッグ情報（開発中のみ） -->
+    <div id="debug" style="display:none;"></div>
+    
+    <!-- スクリプト -->
+    <script src="js/utils.js"></script>
+    <script src="js/ar.js"></script>
+    <script src="js/pose.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

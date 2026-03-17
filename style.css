@@ -1,0 +1,133 @@
+/* style.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    background: #000;
+}
+
+#ui {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#score {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 48px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.5);
+    padding: 10px 20px;
+    border-radius: 30px;
+    backdrop-filter: blur(5px);
+}
+
+#combo {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 32px;
+    background: rgba(255,200,0,0.8);
+    color: #000;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+#message {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: white;
+    background: rgba(0,0,0,0.7);
+    padding: 15px 30px;
+    border-radius: 40px;
+    text-align: center;
+    white-space: nowrap;
+    border: 2px solid rgba(255,255,255,0.3);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#debug {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.8);
+    color: #0f0;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 5px;
+    border-radius: 4px;
+    z-index: 20;
+    max-width: 300px;
+    pointer-events: none;
+}
+
+/* スタート前のオーバーレイ */
+#start-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 100;
+    transition: opacity 0.5s;
+}
+
+#start-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#start-overlay h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px rgba(100,200,255,0.5);
+}
+
+#start-overlay p {
+    font-size: 24px;
+    margin-bottom: 40px;
+}
+
+#start-overlay .wave-icon {
+    font-size: 80px;
+    animation: wave 1.5s infinite;
+}
+
+@keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(30deg); }
+    75% { transform: rotate(-30deg); }
+}
+
+/* レスポンシブ */
+@media (max-width: 600px) {
+    #score { font-size: 36px; }
+    #combo { font-size: 24px; }
+    #message { font-size: 18px; bottom: 50px; }
+    #start-overlay h1 { font-size: 36px; }
+    #start-overlay p { font-size: 18px; }
+}
