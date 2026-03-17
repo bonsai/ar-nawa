@@ -951,11 +951,21 @@ class RenderManager {
         const leftRobot = this.robots[0].mesh.position;
         const rightRobot = this.robots[1].mesh.position;
         
-        // 縄の高さを sin カーブで変化
-        const ropeY = Math.sin(angle) * 1.0 + 0.8; // 0.8〜1.8 くらい
+        // 縄の上下移動（sin カーブ）
+        // 角度 0〜2πで 1 回転
+        const normalizedAngle = angle % (Math.PI * 2);
+        
+        // 縄のベース高さ（中央付近）
+        const baseHeight = 0.5;
+        const amplitude = 1.2; // 上下振幅
+        
+        // 縄の形状：放物線 + 上下移動
+        // 縄が「下」に来る時：プレイヤーがジャンプするタイミング
+        const ropePhase = Math.sin(normalizedAngle); // -1(上) 〜 1(下)
         
         // 縄の色を位置で変化（下の時は赤く危険表示）
-        const isRopeLow = Math.sin(angle) < -0.5;
+        const isRopeLow = ropePhase > 0.5; // 下側に来ている
+        
         if (isRopeLow) {
             // 危険ゾーン：赤く強く光る
             this.rope.points.material.color.setHex(0xff0044);
@@ -974,22 +984,26 @@ class RenderManager {
         for (let i = 0; i < this.rope.particles; i++) {
             const t = i / (this.rope.particles - 1);
             
-            // 左から右への直線補間
+            // 左から右への直線補間（横方向の縄）
             const x = leftRobot.x + (rightRobot.x - leftRobot.x) * t;
             const z = leftRobot.z + (rightRobot.z - leftRobot.z) * t;
             
-            // 縄のたるみ（放物線）
-            const sag = Math.sin(t * Math.PI) * 0.3;
+            // 縄の上下移動
+            // 中央が一番下（または上）になる放物線
+            const parabola = Math.sin(t * Math.PI) * amplitude;
+            
+            // 全体の高さ：ベース + 放物線 - 回転による上下
+            const ropeY = baseHeight + parabola - (ropePhase * amplitude * 0.8);
             
             positions[i*3] = x;
-            positions[i*3+1] = ropeY - sag;
+            positions[i*3+1] = ropeY;
             positions[i*3+2] = z;
         }
         
         this.rope.points.geometry.attributes.position.needsUpdate = true;
         
         // 縄の軌跡更新
-        this.updateRopeTrails(angle, leftRobot, rightRobot, ropeY);
+        this.updateRopeTrails(angle, leftRobot, rightRobot, baseHeight, ropePhase);
         
         // 影リングの位置を追跡（縄が一番下の時だけ強調）
         if (this.shadowRing) {
@@ -1006,23 +1020,25 @@ class RenderManager {
         }
     }
     
-    updateRopeTrails(angle, leftRobot, rightRobot, ropeY) {
+    updateRopeTrails(angle, leftRobot, rightRobot, baseHeight, ropePhase) {
         if (!this.ropeTrails) return;
         
         // 軌跡は少し前の角度を使用
         this.ropeTrails.forEach((trail, idx) => {
             const trailAngle = angle - (idx + 1) * 0.15;
-            const trailRopeY = Math.sin(trailAngle) * 1.0 + 0.8;
+            const trailPhase = Math.sin(trailAngle % (Math.PI * 2));
+            const trailRopeY = baseHeight + Math.sin(Math.PI * 0.5) * 1.2 - (trailPhase * 1.2 * 0.8);
+            
             const positions = trail.geometry.attributes.position.array;
             
             for (let i = 0; i < 40; i++) {
                 const t = i / 39;
                 const x = leftRobot.x + (rightRobot.x - leftRobot.x) * t;
                 const z = leftRobot.z + (rightRobot.z - leftRobot.z) * t;
-                const sag = Math.sin(t * Math.PI) * 0.3;
+                const parabola = Math.sin(t * Math.PI) * 1.2;
                 
                 positions[i*3] = x;
-                positions[i*3+1] = trailRopeY - sag;
+                positions[i*3+1] = baseHeight + parabola - (trailPhase * 1.2 * 0.8);
                 positions[i*3+2] = z;
             }
             

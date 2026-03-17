@@ -167,13 +167,13 @@ class GameManager {
         this.playerState = 'jumping';
         
         // 縄の現在位置をチェック
-        const ropeY = Math.sin(this.ropeAngle); // -1〜1
+        const ropePhase = Math.sin(this.ropeAngle % (Math.PI * 2)); // -1(上) 〜 1(下)
         
         // 縄が下の位置にある（危険ゾーン）
-        const isRopeLow = ropeY < -0.5;
+        const isRopeLow = ropePhase > 0.5;
         
         // ジャンプタイミング判定
-        if (isRopeLow && Math.abs(ropeY) < this.jumpWindow) {
+        if (isRopeLow && Math.abs(ropePhase) < 0.8) {
             // 成功！縄を避けられた
             const jumpScore = 100 * this.combo;
             this.score += jumpScore;
@@ -191,7 +191,7 @@ class GameManager {
             }));
             
             Utils.log(`ジャンプ成功！スコア：${jumpScore}, コンボ：${this.combo}`);
-        } else if (isRopeLow && !jumpData.fallback) {
+        } else if (isRopeLow && !jumpData.fallback && !jumpData.fromPose) {
             // 失敗：縄に当たった！
             this.onHitByRope();
         }
